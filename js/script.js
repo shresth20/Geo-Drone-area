@@ -28,7 +28,7 @@
      → all three found: the square and the trapezium sink back
        under the water, one after the other, each with a splash
      → "correct! these landing zones have the same shape as the
-        spaceship"
+        spaceship", and the feed cuts straight to screen 3
 
    Screen 3 · the landing
      the craft rises with its base and height called out
@@ -339,7 +339,29 @@
       function () { return M.wait(360); },
 
       /* --- payoff --- */
-      function () { return narrate(el.topbarText, 'shapeMatch'); }
+      function () { return narrate(el.topbarText, 'shapeMatch'); },
+
+      /* --- and straight on to the landing ---
+         The task is done and the line that closes it has finished, so
+         there is nothing left for the player to do on this screen.
+         The hand-off is the same one the LAUNCH button makes: a beat
+         to let the last word land, the feed-cut sting, then the swap.
+
+         Two steps rather than one, deliberately. sequence() checks the
+         generation between them, so a player who reaches for "<"
+         during that beat is not yanked forward by a jump that was
+         queued before they moved.
+
+         `silent` stops goTo cutting the sting it is transitioning
+         under, and firing without awaiting is safe: goTo bumps the
+         generation itself, stranding this sequence, and there are no
+         steps after this one left to unwind. */
+      function () { return M.wait(900); },
+      function (id) {
+        if (!live(id)) return;
+        A.sfx('glitch', { volume: 0.34 });
+        return goTo(2, { silent: true });
+      }
     ]);
   }
 
