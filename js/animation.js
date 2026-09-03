@@ -300,9 +300,11 @@
      as the one before it. */
   function originOf(el) {
     var x = 0, y = 0;
-    /* walk up to the screen, which is the offsetParent both the ship
-       and the pads ultimately hang from */
-    while (el && !/\bscreen\b/.test(el.className || '')) {
+    /* Walk up to the screen, which is the offsetParent both the ship
+       and the pads ultimately hang from. classList, not className:
+       on an SVG element className is an SVGAnimatedString rather
+       than a string, and a regex over it would never match. */
+    while (el && !(el.classList && el.classList.contains('screen'))) {
       x += el.offsetLeft;
       y += el.offsetTop;
       el = el.offsetParent;
@@ -327,15 +329,19 @@
        one of the other pads */
     var dir = dx < 0 ? -1 : 1;
 
-    var fx = dx + dir * sw * 0.46;
-    var fy = dy + sw * 0.42;
+    /* Mostly down, only a little sideways: sliding off the near edge
+       keeps the whole fall inside the frame, where going out to the
+       side put the craft behind the painted bezel on the outer pads.
+       The sideways component still tells you WHICH way it went. */
+    var fx = dx + dir * sw * 0.26;
+    var fy = dy + sw * 0.44;
 
     return {
       s: s, sw: sw, dx: dx, dy: dy, dir: dir,
       landed: xf(dx, dy, s),
       above:  xf(dx, dy - sw * 0.44, s),
       fell:   xf(fx, fy, s),
-      gone:   xf(fx + dir * sw * 0.05, fy + sw * 0.30, s * 0.88),
+      gone:   xf(fx + dir * sw * 0.03, fy + sw * 0.26, s * 0.88),
       /* where the water gets hit: the craft's base centre at the
          bottom of the fall, in screen coordinates */
       impact: {

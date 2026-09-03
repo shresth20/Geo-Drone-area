@@ -287,8 +287,7 @@
   .launch__ring { animation: none !important; }
 
   /* the gate button must still arrive, just without the rise */
-  .gate__btn.is-in,
-  .gate__hint.is-in { animation: none; opacity: 1; }
+  .gate__btn.is-in { animation: none; opacity: 1; }
 
   /* the invitation and the idle drifts are decoration; the pick,
      refuse and sink animations carry meaning, so they stay */

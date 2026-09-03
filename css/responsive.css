@@ -39,16 +39,20 @@
   /* the bar is the instruction, so it gets the width it needs; the
      roundel and the slashes are decoration and go first */
   .topbar { width: 92%; top: 4%; }
-  .topbar__frame { gap: 8px; padding: 7px 12px; }
+  .topbar__frame { padding: 6px 10px; }
   .topbar__text { font-size: clamp(8px, 2.35vw, 13px); letter-spacing: .008em; }
-  .topbar__ticks { display: none; }
 
   .target { left: 3%; top: 15%; width: clamp(58px, 15%, 92px); }
+
+  /* the units sublabel is dropped on small screens — see the
+     combined query near the end of this file */
   .target__label { letter-spacing: .1em; }
   .target__name  { letter-spacing: .1em; }
 
-  .gate__eyebrow { letter-spacing: .32em; }
-  .gate__slot { min-height: 60px; }
+  /* narrow: the artwork's clear band is the same fraction of the
+     image, but the controls in it can afford to be smaller */
+  .gate__inner { width: 84%; top: 75.5%; }
+  .gate__slot { min-height: 52px; }
   .gate__load { width: min(74vw, 300px); }
   .gate__status { font-size: 9px; letter-spacing: .12em; }
 }
@@ -63,13 +67,19 @@
   /* almost no vertical room: the bar shrinks to a single tight line
      and the ship chip drops under it rather than beside it */
   .topbar { top: 3.4%; }
-  .topbar__frame { min-height: 30px; padding: 4px 10px; }
+  .topbar__frame { min-height: 30px; padding: 4px 8px; }
   .topbar__text { font-size: clamp(8px, 2.7vh, 13px); }
-  .topbar__badge { width: clamp(22px, 5.4vh, 34px); }
+  .topbar { --badge: clamp(20px, 5.6vh, 34px); }
 
   .target { top: 26%; width: clamp(54px, 8%, 96px); }
-  .gate__title { margin-bottom: .8em; }
-  .gate__hint { margin-top: 1em; }
+
+  /* barely any height: lift the whole landing tableau and close the
+     gap between the callouts and the pads */
+  .screen--landing { --ship-y: 44%; --base-y: 79%; }
+  /* barely any height: the band between the logo and the moon is
+     only a few dozen pixels, so the block starts higher in it */
+  .gate__inner { top: 74%; }
+  .gate__slot { min-height: 46px; }
 }
 
 /* ---------------------------------------------------------- very wide (letterbox-ish) */
@@ -90,12 +100,42 @@
   .launch__label { font-size: clamp(8px, 2.6vw, 15px); }
   .flyout__drone { width: 34%; }
 
+  /* In portrait the LANDING tableau is bound by width, not height:
+     three triangles in a row plus the ship's callouts have to fit
+     across 390px. So --pu is pushed as far as the row allows, the
+     outer pads are spread to 19/81 to buy that extra width back, and
+     the ship is dropped to meet them — at the desktop spacing the
+     craft and the pads sat at opposite ends of an empty column. */
+  .screen--landing {
+    --pu: min(1.62vw, 1.74vh);
+    --ship-y: 46%;
+    --base-y: 76%;
+  }
+  .pad--l { --cx: 20%; }
+  .pad--m { --cx: 50%; }
+  .pad--r { --cx: 80%; }
+
+  /* no room for tracking on a 50px-wide triangle */
+  .pad__area i { letter-spacing: .02em; }
+
   /* portrait stretches the feed tall: the bar can afford to wrap to
      two lines, and the ship chip has room to sit lower and larger */
   .topbar { width: 92%; }
   .topbar__text { font-size: clamp(9px, 2.6vw, 16px); }
   .target { top: 22%; width: clamp(66px, 18%, 120px); }
 }
+
+/* ---------------------------------------------------------- small pads
+   --pu is min(vw, vh), so a pad is small whenever EITHER axis is
+   small — a 390px-wide portrait phone and a 390px-tall landscape one
+   both end up with a 12-unit pad about 80px across. At that size
+   "SQ UNITS" renders around 6px: too small to read, and wide enough
+   to spill off the painted surface onto the rim. The number carries
+   it on its own, and the HUD line under the row states the units. */
+@media (max-width: 620px), (max-height: 460px) {
+  .pad__area i { display: none; }
+}
+
 
 /* ---------------------------------------------------------- pointer: coarse */
 @media (hover: none) {

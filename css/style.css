@@ -828,6 +828,13 @@ button { font: inherit; color: inherit; }
   top: 4.6%;
   z-index: 9;
   width: min(84%, 1180px);
+
+  /* the roundel's diameter, referenced twice: once to size it, once
+     to reserve the same room on BOTH sides of the line so the text
+     stays optically centred in the pill instead of being pushed off
+     by the badge sitting in front of it */
+  --badge: clamp(26px, 4.6vh, 52px);
+
   transform: translate(-50%, -190%);
   opacity: 0;
   pointer-events: none;
@@ -841,72 +848,56 @@ button { font: inherit; color: inherit; }
   transform: translate(-50%, 0);
 }
 
+/* One clean capsule: a thin lit rim, a dark navy interior lifted a
+   little from below, and a soft bloom outside it. No chamfers, no
+   rails, no shoulder marks — the line is the only thing on it. */
 .topbar__frame {
   position: relative;
   display: flex;
   align-items: center;
-  gap: clamp(8px, 1.4vw, 22px);
-  min-height: clamp(38px, 6.2vh, 74px);
-  padding: clamp(6px, .9vh, 12px) clamp(14px, 1.9vw, 30px);
-  /* chamfered HUD plate: the notch depth is in px so it does not
-     turn into a spike on a narrow screen */
-  clip-path: polygon(
-    0 14px, 14px 0,
-    calc(100% - 14px) 0, 100% 14px,
-    100% calc(100% - 14px), calc(100% - 14px) 100%,
-    14px 100%, 0 calc(100% - 14px));
+  min-height: clamp(36px, 6.4vh, 72px);
+  padding: clamp(5px, .8vh, 11px) clamp(10px, 1.2vw, 20px);
+  border-radius: 999px;
   background:
-    linear-gradient(180deg, rgba(18, 62, 116, .92), rgba(6, 22, 48, .95) 55%, rgba(9, 34, 68, .92));
+    radial-gradient(130% 210% at 50% 128%, rgba(38, 122, 190, .38), rgba(38, 122, 190, 0) 68%),
+    linear-gradient(180deg, rgba(9, 32, 64, .88), rgba(4, 16, 38, .93));
   box-shadow:
-    inset 0 0 0 2px rgba(79, 216, 255, .55),
-    inset 0 0 26px rgba(47, 210, 255, .22),
-    0 10px 34px rgba(0, 0, 0, .55);
+    inset 0 0 0 1.5px rgba(104, 218, 255, .9),
+    inset 0 1px 0 rgba(190, 240, 255, .18),
+    inset 0 0 34px rgba(32, 132, 210, .3),
+    0 0 20px rgba(64, 190, 255, .3),
+    0 10px 30px rgba(0, 0, 0, .45);
 }
 
-/* thin cyan rails along the top and bottom edges */
-.topbar__frame::before,
-.topbar__frame::after {
-  content: "";
-  position: absolute;
-  left: 12%;
-  right: 12%;
-  height: 2px;
-  background: linear-gradient(to right,
-    rgba(79, 216, 255, 0),
-    rgba(150, 240, 255, .95) 25%,
-    rgba(150, 240, 255, .95) 75%,
-    rgba(79, 216, 255, 0));
-  opacity: .8;
-}
-.topbar__frame::before { top: 0; }
-.topbar__frame::after  { bottom: 0; }
-
-/* the rocket roundel on the left shoulder */
+/* the rocket roundel, parked on the left of the capsule */
 .topbar__badge {
-  position: relative;
-  flex: 0 0 auto;
+  position: absolute;
+  left: clamp(5px, .5vw, 11px);
+  top: 50%;
   display: grid;
   place-items: center;
-  width: clamp(28px, 4.4vh, 54px);
+  width: var(--badge);
   aspect-ratio: 1;
+  transform: translateY(-50%);
   border-radius: 50%;
-  background: radial-gradient(120% 120% at 30% 25%, #14406f, #06152e 70%);
+  background: radial-gradient(120% 120% at 32% 24%, #10365e, #050f24 72%);
   box-shadow:
-    inset 0 0 0 2px rgba(79, 216, 255, .8),
-    0 0 18px rgba(47, 210, 255, .45);
+    inset 0 0 0 1.5px rgba(104, 218, 255, .9),
+    0 0 14px rgba(58, 186, 255, .4);
 }
 
 .topbar__badge svg {
-  width: 60%;
-  height: 60%;
+  width: 58%;
+  height: 58%;
   fill: none;
-  stroke: #8fe6ff;
+  stroke: #a5ecff;
   stroke-width: 1.6;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
-.topbar__badge circle { fill: #06152e; }
+.topbar__badge circle { fill: #050f24; }
+
 
 /* Set in Baskerville, sentence case: the bar carries the
    commander's spoken line, so it reads as speech rather than as
@@ -918,6 +909,9 @@ button { font: inherit; color: inherit; }
   margin: 0;
   min-width: 0;
   text-align: center;
+  /* the same room either side, so the badge does not shove the line
+     off the pill's centre */
+  padding-inline: calc(var(--badge) + clamp(4px, .5vw, 10px));
   font-family: "Libre Baskerville", Georgia, "Times New Roman", serif;
   font-weight: 700;
   font-size: clamp(9px, 1.18vw, 21px);
@@ -932,24 +926,6 @@ button { font: inherit; color: inherit; }
   white-space: pre-wrap;
 }
 
-/* three speed slashes on the right shoulder, echoing the badge */
-.topbar__ticks {
-  flex: 0 0 auto;
-  display: flex;
-  gap: clamp(2px, .3vw, 5px);
-  transform: skewX(-22deg);
-}
-
-.topbar__ticks i {
-  display: block;
-  width: clamp(2px, .32vw, 5px);
-  height: clamp(10px, 1.8vh, 20px);
-  border-radius: 1px;
-  background: rgba(120, 232, 255, .85);
-  box-shadow: 0 0 10px rgba(79, 216, 255, .7);
-}
-.topbar__ticks i:nth-child(2) { opacity: .7; }
-.topbar__ticks i:nth-child(3) { opacity: .45; }
 
 
 /* ---------------------------------------------------------- typewriter
@@ -1061,8 +1037,9 @@ button { font: inherit; color: inherit; }
 
   /* all three pads sit their base line on this row — the shared
      line is what makes them read as one shore. High enough that the
-     largest pad's rocky skirt clears the caption underneath it. */
-  --base-y: 76%;
+     largest pad's rocky skirt clears the caption underneath it, and
+     that a craft sliding off the front still has water to go into. */
+  --base-y: 74%;
 
   /* where the ship hovers before it is sent down */
   --ship-y: 41%;
@@ -1233,9 +1210,13 @@ button { font: inherit; color: inherit; }
 /* --k = 17 × sqrt(area / 20), so the DRAWN areas are in true
    proportion to the numbers printed on them, and the 20-unit pad
    comes out exactly the size of the ship */
-.pad--l { --k: 20.82; --cx: 21%; }   /* 30 sq units — too much room */
+/* --cx is where each base CENTRE sits. The outer two are held well
+   inside the frame because a failed landing slides off the edge of
+   its pad, and a craft toppling off the leftmost one at 21% ended up
+   half behind the painted bezel. */
+.pad--l { --k: 20.82; --cx: 24%; }   /* 30 sq units — too much room */
 .pad--m { --k: 13.17; --cx: 50%; }   /* 12 sq units — too small     */
-.pad--r { --k: 17.00; --cx: 79%; }   /* 20 sq units — the fit       */
+.pad--r { --k: 17.00; --cx: 76%; }   /* 20 sq units — the fit       */
 
 .pad__img {
   position: relative;
@@ -1257,10 +1238,10 @@ button { font: inherit; color: inherit; }
 .pad__area {
   position: absolute;
   left: 49.5%;
-  /* 52%, not the true centroid at 49%: the triangle widens downward,
-     so a touch below centre is where it LOOKS centred — and it keeps
-     the smallest pad's caption off its rocky rim */
-  top: 52%;
+  /* 48%: the triangle widens downward, so the block wants to sit a
+     little below the geometric middle to look centred — but not so
+     low that it meets the invitation ring on the base line */
+  top: 48%;
   z-index: 3;
   margin: 0;
   display: grid;
@@ -1286,12 +1267,18 @@ button { font: inherit; color: inherit; }
    against every triangle instead of swamping the small one */
 .pad__area b {
   font-weight: 800;
-  font-size: calc(var(--k) * var(--pu) * .2);
+  /* the floor matters on the 12-unit pad in portrait, where the
+     proportional size alone drops under 10px */
+  font-size: max(13px, calc(var(--k) * var(--pu) * .2));
 }
 
 .pad__area i {
   font-style: normal;
   font-weight: 700;
+  /* no floor here, unlike the number: a fixed minimum would push
+     this line wider than the triangle it is printed on. Below the
+     size where it stops being legible it is dropped instead — see
+     the phone block in responsive.css. */
   font-size: calc(var(--k) * var(--pu) * .072);
   letter-spacing: .1em;
   text-transform: uppercase;
@@ -1326,15 +1313,16 @@ button { font: inherit; color: inherit; }
 .pad__hit:focus-visible { outline: none; }
 
 /* the invitation ring, sat on the surface the ship would touch */
-/* Sat tight on the base line, and flat: a taller ellipse put its
-   top arc straight through the printed area and read as a stray
-   line drawn across the number. */
+/* Sat on the base line, and very flat. Two reasons: a rounder
+   ellipse put its top arc straight through the printed area and read
+   as a stray line ruled across the number, and a ring lying on a
+   surface seen from this angle IS this flat. */
 .pad__ring {
   position: absolute;
   left: 49.5%;
-  top: 71%;
-  width: 84%;
-  aspect-ratio: 5 / 1;
+  top: 70%;
+  width: 80%;
+  aspect-ratio: 8 / 1;
   transform: translate(-50%, -50%);
   border-radius: 50%;
   border: max(2px, .16vw) solid rgba(150, 235, 255, .75);
@@ -1538,38 +1526,34 @@ button { font: inherit; color: inherit; }
 /* ============================================================
    START GATE
    ============================================================ */
+/* The whole screen is one piece of artwork — logo, shapes and the
+   moon are painted in — so the gate is the image, stretched to fill
+   exactly like every other backdrop in the mission (see .layer). */
 .gate {
   position: absolute;
   inset: 0;
   z-index: 50;
-  display: grid;
-  place-items: center;
-  background:
-    radial-gradient(90% 90% at 50% 45%, rgba(12, 26, 56, .72), rgba(2, 4, 10, .93) 70%),
-    rgba(2, 4, 10, .8);
-  backdrop-filter: blur(3px);
+  background-color: #050a18;
+  background-image: url("../assets/images/welcome-screen.png");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100% 100%;   /* stretched to fill, as specified */
   transition: opacity .7s ease, visibility 0s linear .7s;
 }
 .gate.is-gone { opacity: 0; visibility: hidden; pointer-events: none; }
 
-.gate__inner { text-align: center; padding: 6vmin; }
-
-.gate__eyebrow {
-  margin: 0 0 .5em;
-  font-size: clamp(11px, 1.5vw, 18px);
-  font-weight: 700;
-  letter-spacing: .48em;
-  color: rgba(140, 220, 255, .75);
-}
-
-.gate__title {
-  margin: 0 0 1.4em;
-  font-size: clamp(28px, 6.4vw, 76px);
-  font-weight: 700;
-  letter-spacing: .02em;
-  line-height: 1;
-  color: #fff;
-  text-shadow: 0 0 44px rgba(60, 180, 255, .7);
+/* Anchored to the artwork, not to the middle of the screen: the
+   logo plate runs to roughly 67% of the image and the moon limb
+   comes up at about 82%, which leaves one clear band for the
+   controls to sit in. Because the art is stretched rather than
+   cropped, these percentages hold at every viewport shape. */
+.gate__inner {
+  position: absolute;
+  left: 50%;
+  top: 75.5%;
+  transform: translate(-50%, -50%);
+  width: min(88%, 520px);
+  text-align: center;
 }
 
 /* ---------------------------------------------------------- gate loader
@@ -1578,10 +1562,14 @@ button { font: inherit; color: inherit; }
    hand-off happens in place: the title does not jump up the screen
    at the moment the mission becomes ready. The slot is sized off the
    taller of the two (the loader) so neither state can shrink it. */
+/* Kept comfortably taller than the button, which is the taller of
+   the two states. If the button can outgrow the floor, the slot
+   grows with it at the hand-off and the whole block — centred on
+   the artwork's clear band — shifts a couple of pixels as it swaps. */
 .gate__slot {
   display: grid;
   place-items: center;
-  min-height: clamp(74px, 9vh, 108px);
+  min-height: clamp(66px, 8vh, 92px);
 }
 .gate__slot > * { grid-area: 1 / 1; }
 .gate__slot > [hidden] { display: none; }
@@ -1708,30 +1696,27 @@ button { font: inherit; color: inherit; }
     inset 0 2px 4px rgba(255, 255, 255, .55);
 }
 
-/* held out of view rather than out of the flow: the line reserves
-   its height from the first frame, so the reveal swaps the loader
-   for the button without the title stepping up the screen */
-.gate__hint {
-  opacity: 0;
-  visibility: hidden;
-  margin: 1.8em 0 0;
-  font-size: clamp(10px, 1.15vw, 15px);
-  letter-spacing: .1em;
-  color: rgba(180, 215, 240, .6);
-}
-
-.gate__hint.is-in {
-  opacity: 1;
-  visibility: visible;
-  animation: gateRise .62s cubic-bezier(.22, 1, .36, 1) .1s backwards;
-}
 
 
 /* ---------------------------------------------------------- a11y */
+
+/* out of view, still in the accessibility tree */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .is-reduced .dash__sheen,
 .is-reduced .starfield i,
 .is-reduced .gate__sheen,
 .is-reduced .launch__ring { animation: none !important; }
 
-.is-reduced .gate__btn.is-in,
-.is-reduced .gate__hint.is-in { animation: none; }
+.is-reduced .gate__btn.is-in { animation: none; }

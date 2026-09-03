@@ -85,7 +85,12 @@
     shapeMatch: 'Correct! These landing zones have the same shape as the spaceship.',
     tryAgain: 'Try again.',
     spaceNeeded: 'Next, we need to find how much space the spaceship needs.',
-    calcArea: 'Calculate the area of spaceship, and select the land with required area.'
+    calcArea: 'Calculate the area of spaceship, and select the land with required area.',
+    chooseExact: 'Choose the landing zone with the exact area.',
+    tooSmall: 'This landing zone is too small. The spaceship cannot fit safely.',
+    tooLarge: 'This landing zone is too large. Try to find the exact match.',
+    perfectFit: 'Perfect match! The spaceship fits exactly.',
+    landed: 'Landing successful! Great work, Space Commander.'
   };
 
   function grab() {
@@ -97,7 +102,7 @@
       'topbar', 'topbarText', 'target',
       'screenLanding', 'ship', 'shipCraft', 'shipDims', 'pads', 'splash',
       'landHud', 'landCaption', 'landTally', 'landTopbar', 'landTopbarText',
-      'veil', 'gate', 'gateBtn', 'gateHint', 'gateLoad', 'gateFill',
+      'veil', 'gate', 'gateBtn', 'gateLoad', 'gateFill',
       'gateStatus', 'gatePct', 'nav', 'navPrev', 'navNext'
     ].forEach(function (id) { el[id] = document.getElementById(id); });
   }
@@ -558,14 +563,13 @@
       function () { return offerPads(); },
 
       function () { return narrate(el.landTopbarText, 'calcArea'); },
+      function () { return narrate(el.landTopbarText, 'chooseExact'); },
 
       /* --- over to the player, for as many attempts as it takes --- */
       function (id) { return startChoosing(id); },
 
-      /* --- planted --- */
+      /* --- planted; plant() has already said its piece --- */
       function () {
-        el.landCaption.textContent = 'PERFECT FIT — 20 SQ UNITS';
-        el.landCaption.classList.add('is-shown');
         el.landTally.textContent = 'AREA = ½ × 8 × 5 = 20';
         el.landTally.classList.add('is-shown');
       }
@@ -589,16 +593,23 @@
      stale generation id. */
   function startChoosing(id) {
     armChoice();
-
-    el.landCaption.textContent = 'CHOOSE THE LANDING ZONE';
-    el.landCaption.classList.add('is-shown');
-    el.landTally.textContent = 'BASE 8 · HEIGHT 5';
-    el.landTally.classList.add('is-shown');
+    standingHint();
 
     return new Promise(function (resolve) {
       releaseLand = resolve;
       if (!live(id)) resetLanding();
     });
+  }
+
+  /* The HUD line under the pads is deliberately NOT a repeat of the
+     spoken line in the bar above — it carries the arithmetic the
+     player is being asked to do, and stays put while the narration
+     comes and goes. */
+  function standingHint() {
+    el.landCaption.textContent = 'AREA = ½ × BASE × HEIGHT';
+    el.landCaption.classList.add('is-shown');
+    el.landTally.textContent = 'BASE 8 · HEIGHT 5';
+    el.landTally.classList.add('is-shown');
   }
 
   function armChoice() {
@@ -626,63 +637,86 @@
     var ref = correctPad();
     if (!ref) return;
 
+    /* An attempt runs on its own promise chain, outside the screen's
+       sequence, so it has to carry the generation itself — otherwise
+       a jump mid-crash would come back and re-arm a screen the
+       player has already left. */
+    var id = runId;
+
     landing = true;
     disarmChoice();
     A.sfx('click', { volume: 0.4 });
 
     /* the callouts and the idle bob come off: the craft is flying
-       now, and a measurement drawing riding along with it through a
-       crash would read as part of the wreck */
+       now, and a measurement drawing riding along through a crash
+       would read as part of the wreck */
     el.ship.classList.add('is-committed');
 
     var plan = M.padPlan(el.ship, pad, ref);
+    el.ship.style.setProperty('--lean', plan.dir);
 
     M.shipDescend(el.ship, plan).then(function () {
-      if (area === SHIP_AREA) return plant(pad, plan);
-      return fail(pad, plan, area < SHIP_AREA);
+      if (!live(id)) return;
+      if (area === SHIP_AREA) return plant(pad, id);
+      return fail(pad, plan, area < SHIP_AREA, id);
     });
   }
 
   /* ---------------------------------------------------------- it fits */
-  function plant(pad, plan) {
+  function plant(pad, id) {
     solved = true;
     el.ship.classList.add('is-planted');
     pad.classList.add('is-fit');
 
-    el.landCaption.textContent = 'TOUCHDOWN';
+    el.landCaption.textContent = 'PERFECT FIT · 20 SQ UNITS';
     el.landCaption.classList.add('is-shown');
+    el.landTally.textContent = 'AREA = ½ × 8 × 5 = 20';
 
     A.sfx('correct', { volume: 0.6 });
-    M.wait(260).then(function () { A.sfx('cheer', { volume: 0.5 }); });
 
-    return M.wait(1500).then(function () {
-      landing = false;
-      var done = releaseLand;
-      releaseLand = null;
-      if (done) done();
-    });
+    return narrate(el.landTopbarText, 'perfectFit')
+      .then(function () {
+        if (!live(id)) return;
+        A.sfx('cheer', { volume: 0.5 });
+        return narrate(el.landTopbarText, 'landed');
+      })
+      .then(function () {
+        landing = false;
+        var done = releaseLand;
+        releaseLand = null;
+        if (done) done();
+      });
   }
 
   /* ---------------------------------------------------------- it does not
      `tight` true  → the pad was too small, the craft overhangs it
-     `tight` false → the pad was too big, nothing holds the craft */
-  function fail(pad, plan, tight) {
+     `tight` false → the pad was too big, nothing holds the craft
+
+     The verdict is SPOKEN over the struggle rather than after it: the
+     line starts as the craft begins to lose its footing and is still
+     going while it goes over, which is roughly how long the topple,
+     the splash and the sinking take. The chain waits for the line at
+     the end, so a slow connection delays the retry prompt instead of
+     talking over it. */
+  function fail(pad, plan, tight, id) {
     pad.classList.add(tight ? 'is-tight' : 'is-loose');
 
-    el.landCaption.textContent = tight
-      ? 'TOO SMALL — THE CRAFT OVERHANGS'
-      : 'TOO MUCH ROOM — THE CRAFT CANNOT SETTLE';
+    el.landCaption.textContent =
+      pad.dataset.area + ' SQ UNITS — THE CRAFT NEEDS 20';
     el.landCaption.classList.add('is-shown');
-    el.landTally.textContent = pad.dataset.area + ' SQ UNITS · NEEDED 20';
 
     A.sfx('wrong', { volume: 0.45 });
     el.ship.classList.add(tight ? 'is-teeter' : 'is-rock');
 
+    var said = narrate(el.landTopbarText, tight ? 'tooSmall' : 'tooLarge');
+
     return M.wait(tight ? 1150 : 1600)
       .then(function () {
+        if (!live(id)) return null;
         return M.shipTopple(el.ship, el.shipCraft, plan);
       })
       .then(function (impact) {
+        if (!live(id) || !impact) return;
         /* the water is hit wherever it went over, not at a fixed
            spot, so the splash is parked on the returned point */
         el.splash.style.transform =
@@ -693,28 +727,23 @@
         A.sfx('rock', { volume: 0.72, rate: 0.9 });
         return M.shipSink(el.ship, plan);
       })
+      .then(function () { return said; })
       .then(function () {
-        el.landCaption.classList.remove('is-shown');
-        return A.say('tryAgain');
-      })
-      .then(function () {
-        return M.wait(320);
-      })
-      .then(function () {
-        /* put it back on the pad rail and hand control over again */
+        if (!live(id)) return;
+        /* put it back on the rail, callouts and all */
         pad.classList.remove('is-tight', 'is-loose');
         el.ship.classList.remove('is-committed', 'is-teeter', 'is-rock');
         M.shipReset(el.ship, el.shipCraft);
         el.splash.classList.remove('is-on');
         el.shipDims.classList.add('is-drawn');
-        return M.wait(700);
+        return M.wait(760);
       })
       .then(function () {
+        if (!live(id)) return;
         landing = false;
         if (!solved) armChoice();
-        el.landCaption.textContent = 'CHOOSE THE LANDING ZONE';
-        el.landCaption.classList.add('is-shown');
-        el.landTally.textContent = 'BASE 8 · HEIGHT 5';
+        standingHint();
+        return narrate(el.landTopbarText, 'chooseExact');
       });
   }
 
@@ -910,7 +939,6 @@
       void el.gateBtn.offsetWidth;
 
       el.gateBtn.classList.add('is-in');
-      el.gateHint.classList.add('is-in');
 
       try { el.gateBtn.focus({ preventScroll: true }); } catch (e) { /* older browsers */ }
     });

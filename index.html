@@ -16,6 +16,7 @@
   <link rel="preload" as="font" type="font/ttf" crossorigin
         href="assets/fonts/poppins/poppins-extrabold.ttf" />
 
+  <link rel="preload" as="image" href="assets/images/welcome-screen.png" />
   <link rel="preload" as="image" href="assets/images/s1-bg.png" />
   <link rel="preload" as="image" href="assets/images/s1-cockpit-2.png" />
   <link rel="preload" as="image" href="assets/images/s2-bg%20(2).png" />
@@ -177,7 +178,6 @@
           </svg>
         </span>
         <p class="topbar__text" id="topbarText" role="status" aria-live="polite"></p>
-        <span class="topbar__ticks" aria-hidden="true"><i></i><i></i><i></i></span>
       </div>
     </header>
 
@@ -292,9 +292,9 @@
       <span class="splash__ring splash__ring--b"></span>
     </div>
 
-    <!-- HUD frame, stretched to fill -->
-    <div class="layer layer--hud drone-hud" aria-hidden="true"></div>
-
+    <!-- No HUD frame on this screen: the landing is watched from
+         outside the drone feed, so the tableau sits on open water and
+         the only chrome is the narration pill and the HUD lines. -->
     <div class="hud" id="landHud">
       <p class="hud__caption" id="landCaption" role="status" aria-live="polite"></p>
       <p class="hud__tally" id="landTally" role="status" aria-live="polite"></p>
@@ -312,7 +312,6 @@
           </svg>
         </span>
         <p class="topbar__text" id="landTopbarText" role="status" aria-live="polite"></p>
-        <span class="topbar__ticks" aria-hidden="true"><i></i><i></i><i></i></span>
       </div>
     </header>
 
@@ -338,9 +337,11 @@
 
   <!-- ══════════════════════════ START GATE ══════════════════════════ -->
   <div class="gate" id="gate">
+    <!-- the title is painted into the artwork, so the heading is
+         here for the document outline and for screen readers only -->
+    <h1 class="sr-only">Spacecraft Landing Mission</h1>
+
     <div class="gate__inner">
-      <p class="gate__eyebrow">GEO&nbsp;DRONE</p>
-      <h1 class="gate__title">Landing Mission</h1>
 
       <!-- The loader and the button share one grid cell, so the
            hand-off swaps them in place instead of shunting the
@@ -365,7 +366,6 @@
 
       </div>
 
-      <p class="gate__hint" id="gateHint">Sound on — the commander is briefing you.</p>
     </div>
   </div>
 

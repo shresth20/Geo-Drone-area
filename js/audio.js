@@ -42,7 +42,12 @@
     shapeMatch:'Correct! These landing zones have the same shape as the spaceship.mp3',
     tryAgain: 'Try again.mp3',
     spaceNeeded:'Next, we need to find how much space the spaceship needs.mp3',
-    calcArea: 'Calculate the area of spaceship, And select the land with required area.mp3'
+    calcArea: 'Calculate the area of spaceship, And select the land with required area.mp3',
+    chooseExact:'Choose the landing zone with the exact area.mp3',
+    tooSmall: 'This landing zone is too small. The spaceship cannot fit safely.mp3',
+    tooLarge: 'This landing zone is too large. Try to find the exact match.mp3',
+    perfectFit:'Perfect match! The spaceship fits exactly.mp3',
+    landed:   'Landing successful! Great work, Space Commander.mp3'
   };
 
   var SFX = {
