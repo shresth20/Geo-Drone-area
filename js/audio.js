@@ -40,7 +40,9 @@
     lookShapes:'Look at the shapes of the landing zones.mp3',
     pickTriangles:'The spaceship is a triangle. Select all the triangular landing zones.mp3',
     shapeMatch:'Correct! These landing zones have the same shape as the spaceship.mp3',
-    tryAgain: 'Try again.mp3'
+    tryAgain: 'Try again.mp3',
+    spaceNeeded:'Next, we need to find how much space the spaceship needs.mp3',
+    calcArea: 'Calculate the area of spaceship, And select the land with required area.mp3'
   };
 
   var SFX = {
@@ -49,7 +51,8 @@
     glitch:  'screen-glitch.mp3',
     correct: 'correct-answer.ogg',
     wrong:   'incorrect-answer.ogg',
-    click:   'button-click.ogg'
+    click:   'button-click.ogg',
+    cheer:   'confetti-sound.ogg'
   };
 
   var AMBIENCE = 'theme-music.mp3';
@@ -421,14 +424,72 @@
     });
   }
 
-  /* ---------------------------------------------------------- preload */
-  function preload() {
+  /* ---------------------------------------------------------- preload
+
+     Every clip is fetched up front and reports back exactly once,
+     so the start gate can show real progress instead of running a
+     guessed timer next to a spinner.
+
+     A clip that errors counts as settled too: one missing file must
+     not hold the mission behind a bar stuck at 94%. Same for a clip
+     that simply never fires `canplaythrough` — some browsers will
+     sit on a preloading element until it is actually played — which
+     is what the deadline below is for. */
+  function settle(el, done) {
+    var fired = false;
+
+    function fire() {
+      if (fired) return;
+      fired = true;
+      el.removeEventListener('canplaythrough', fire);
+      el.removeEventListener('error', fire);
+      done();
+    }
+
+    /* HAVE_ENOUGH_DATA: already there, nothing to wait for */
+    if (el.readyState >= 4) fire();
+    else {
+      el.addEventListener('canplaythrough', fire);
+      el.addEventListener('error', fire);
+      el.load();
+    }
+
+    return fire;
+  }
+
+  function assetCount() {
+    return Object.keys(VOICE).length + Object.keys(SFX).length + 1;
+  }
+
+  /* Resolves once every clip has settled. `onEach` fires once per
+     clip, which is all the gate needs to drive its bar. */
+  function preload(onEach) {
+    var els = [];
+
     Object.keys(VOICE).forEach(function (k) {
       if (!voices[k]) voices[k] = makeVoice(VOICE[k]);
+      els.push(voices[k]);
     });
-    Object.keys(SFX).forEach(function (k) {
-      var a = new Audio(url(SFX[k]));
-      a.preload = 'auto';
+
+    /* sfx() builds a fresh element per hit, so these exist only to
+       put the file in the HTTP cache before the first hit needs it */
+    Object.keys(SFX).forEach(function (k) { els.push(makeVoice(SFX[k])); });
+    els.push(makeVoice(AMBIENCE));
+
+    return new Promise(function (resolve) {
+      var left = els.length;
+      var forces = [];
+
+      function tick() {
+        if (onEach) onEach();
+        if (--left === 0) resolve();
+      }
+
+      els.forEach(function (el) { forces.push(settle(el, tick)); });
+
+      later(12000).then(function () {
+        forces.forEach(function (f) { f(); });
+      });
     });
   }
 
@@ -439,6 +500,7 @@
 
   global.GeoAudio = {
     preload: preload,
+    assetCount: assetCount,
     suspendAll: suspendAll,
     resumeAll: resumeAll,
     unlock: unlock,

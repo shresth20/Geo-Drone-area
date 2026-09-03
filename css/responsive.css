@@ -40,7 +40,7 @@
      roundel and the slashes are decoration and go first */
   .topbar { width: 92%; top: 4%; }
   .topbar__frame { gap: 8px; padding: 7px 12px; }
-  .topbar__text { font-size: clamp(9px, 2.75vw, 15px); letter-spacing: .02em; }
+  .topbar__text { font-size: clamp(8px, 2.35vw, 13px); letter-spacing: .008em; }
   .topbar__ticks { display: none; }
 
   .target { left: 3%; top: 15%; width: clamp(58px, 15%, 92px); }
@@ -48,6 +48,9 @@
   .target__name  { letter-spacing: .1em; }
 
   .gate__eyebrow { letter-spacing: .32em; }
+  .gate__slot { min-height: 60px; }
+  .gate__load { width: min(74vw, 300px); }
+  .gate__status { font-size: 9px; letter-spacing: .12em; }
 }
 
 /* ---------------------------------------------------------- short / landscape phone */
@@ -61,7 +64,7 @@
      and the ship chip drops under it rather than beside it */
   .topbar { top: 3.4%; }
   .topbar__frame { min-height: 30px; padding: 4px 10px; }
-  .topbar__text { font-size: clamp(9px, 3.1vh, 15px); }
+  .topbar__text { font-size: clamp(8px, 2.7vh, 13px); }
   .topbar__badge { width: clamp(22px, 5.4vh, 34px); }
 
   .target { top: 26%; width: clamp(54px, 8%, 96px); }
@@ -90,7 +93,7 @@
   /* portrait stretches the feed tall: the bar can afford to wrap to
      two lines, and the ship chip has room to sit lower and larger */
   .topbar { width: 92%; }
-  .topbar__text { font-size: clamp(10px, 3vw, 18px); }
+  .topbar__text { font-size: clamp(9px, 2.6vw, 16px); }
   .target { top: 22%; width: clamp(66px, 18%, 120px); }
 }
 

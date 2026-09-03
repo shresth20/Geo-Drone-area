@@ -264,6 +264,176 @@
     return wait((list.length - 1) * gap + settle);
   }
 
+  /* ---------------------------------------------------------- the landing
+
+     Where the ship ends up is arithmetic, not art direction. Both
+     pieces of artwork are square canvases with a triangle inscribed,
+     and the triangles were measured off the alpha channel:
+
+       spaceship   base centre (49.84%, 69.8%) of its box
+       pad         top-face base centre (49.5%, 70.0%) of its box
+       widths      the pad's top face is 0.9688 x the ship's triangle
+
+     padPlan() turns those four numbers plus two live rects into the
+     transforms for every beat of a landing, so the craft sits on the
+     painted surface at any --pu, any aspect ratio, any zoom.
+
+     The critical one is `s`: the scale ALWAYS comes from the pad the
+     ship actually matches (20 sq units), never from the pad it is
+     being flown to. That is what makes the outcome honest — the
+     craft is drawn at its true size, so it visibly overhangs a
+     12-unit pad and visibly rattles about inside a 30-unit one
+     instead of being told which face to pull.                     */
+
+  var SHIP_BX = 0.4984, SHIP_BY = 0.698;   /* ship base centre, box units */
+  var PAD_BX  = 0.495,  PAD_BY  = 0.700;   /* pad top-face base centre    */
+  var SHIP_FIT = 0.9688;                   /* pad face / ship triangle    */
+
+  function xf(dx, dy, s) {
+    return 'translate(' + dx.toFixed(2) + 'px,' + dy.toFixed(2) + 'px)' +
+           ' scale(' + s.toFixed(4) + ')';
+  }
+
+  /* offset* rather than getBoundingClientRect: these are the LAYOUT
+     box and ignore the transforms we are in the middle of applying,
+     so a plan built mid-flight is still built from the same origin
+     as the one before it. */
+  function originOf(el) {
+    var x = 0, y = 0;
+    /* walk up to the screen, which is the offsetParent both the ship
+       and the pads ultimately hang from */
+    while (el && !/\bscreen\b/.test(el.className || '')) {
+      x += el.offsetLeft;
+      y += el.offsetTop;
+      el = el.offsetParent;
+    }
+    return { x: x, y: y };
+  }
+
+  function padPlan(ship, pad, refPad) {
+    var sw = ship.offsetWidth;
+    var pw = pad.offsetWidth;
+    var ph = pad.offsetHeight;
+    var s = SHIP_FIT * refPad.offsetWidth / sw;
+
+    var so = originOf(ship);
+    var po = originOf(pad);
+
+    var dx = po.x + PAD_BX * pw - so.x - s * SHIP_BX * sw;
+    var dy = po.y + PAD_BY * ph - so.y - s * SHIP_BY * sw;
+
+    /* it goes over AWAY from the middle of the row, so a failed
+       landing always drops into open water and never falls through
+       one of the other pads */
+    var dir = dx < 0 ? -1 : 1;
+
+    var fx = dx + dir * sw * 0.46;
+    var fy = dy + sw * 0.42;
+
+    return {
+      s: s, sw: sw, dx: dx, dy: dy, dir: dir,
+      landed: xf(dx, dy, s),
+      above:  xf(dx, dy - sw * 0.44, s),
+      fell:   xf(fx, fy, s),
+      gone:   xf(fx + dir * sw * 0.05, fy + sw * 0.30, s * 0.88),
+      /* where the water gets hit: the craft's base centre at the
+         bottom of the fall, in screen coordinates */
+      impact: {
+        x: so.x + fx + s * SHIP_BX * sw,
+        y: so.y + fy + s * SHIP_BY * sw
+      }
+    };
+  }
+
+  function settle(anim, ms) {
+    return Promise.race([
+      anim.finished.catch(function () {}),
+      wait(ms + 300)
+    ]);
+  }
+
+  /* Read the angle the craft is actually sitting at. The tremble and
+     the rock are CSS keyframes, so their end angle lives in the
+     stylesheet; reading it back beats hard-coding a copy here that
+     would silently drift the day someone retunes the wobble. */
+  function angleOf(el) {
+    var t = global.getComputedStyle(el).transform;
+    if (!t || t === 'none') return 0;
+    try {
+      var m = new DOMMatrixReadOnly(t);
+      return Math.atan2(m.b, m.a) * 180 / Math.PI;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  /* Cross to above the pad, then come down onto it. Two legs in one
+     animation so the traverse and the descent read as one approach
+     rather than a move followed by a drop. */
+  function shipDescend(ship, plan, ms) {
+    if (!ship.animate) return Promise.resolve();
+    ms = reduced() ? 620 : (ms || 2100);
+
+    var anim = ship.animate([
+      { offset: 0,    transform: 'none',      easing: 'cubic-bezier(.4,0,.5,.4)' },
+      { offset: 0.54, transform: plan.above,  easing: 'cubic-bezier(.3,0,.2,1)' },
+      { offset: 1,    transform: plan.landed }
+    ], { duration: ms, fill: 'forwards' });
+
+    return settle(anim, ms);
+  }
+
+  /* It loses the argument with gravity: the craft keeps turning from
+     wherever the judder left it, while the whole ship slides off the
+     edge and drops. Resolves at the moment of impact, handing back
+     the point the water was hit so the splash can be parked there. */
+  function shipTopple(ship, craft, plan, ms) {
+    if (!ship.animate) return Promise.resolve(plan.impact);
+    ms = reduced() ? 420 : (ms || 880);
+
+    var from = angleOf(craft);
+
+    craft.animate([
+      { transform: 'rotate(' + from.toFixed(2) + 'deg)' },
+      { transform: 'rotate(' + (from + plan.dir * 64).toFixed(2) + 'deg)' }
+    ], { duration: ms, easing: 'cubic-bezier(.5,.02,.9,.6)', fill: 'forwards' });
+
+    var anim = ship.animate([
+      { transform: plan.landed, easing: 'cubic-bezier(.4,0,.86,.44)' },
+      { transform: plan.fell }
+    ], { duration: ms, fill: 'forwards' });
+
+    return settle(anim, ms).then(function () { return plan.impact; });
+  }
+
+  /* Under it goes. */
+  function shipSink(ship, plan, ms) {
+    if (!ship.animate) return Promise.resolve();
+    ms = reduced() ? 420 : (ms || 1000);
+
+    var anim = ship.animate([
+      { offset: 0,   transform: plan.fell, opacity: 1 },
+      { offset: 0.4, opacity: 0.72 },
+      { offset: 1,   transform: plan.gone, opacity: 0 }
+    ], { duration: ms, easing: 'cubic-bezier(.35,.1,.7,.6)', fill: 'forwards' });
+
+    return settle(anim, ms);
+  }
+
+  /* Back to the hover, ready for another go. Cancelling is enough:
+     every beat above is a fill:forwards Web Animation, so with them
+     gone the element falls back to its stylesheet position. */
+  function shipReset(ship, craft) {
+    [ship, craft].forEach(function (el) {
+      if (el && el.getAnimations) {
+        el.getAnimations().forEach(function (a) {
+          /* leave the CSS idle bob alone — it is declared, not driven */
+          if (a.animationName !== 'shipBob') a.cancel();
+        });
+      }
+    });
+  }
+
   /* ---------------------------------------------------------- screen swap */
   function swapScreens(from, to, veil, ms) {
     ms = ms || 1250;
@@ -294,6 +464,11 @@
     sweep: sweep,
     surfaceZones: surfaceZones,
     sinkZones: sinkZones,
+    padPlan: padPlan,
+    shipDescend: shipDescend,
+    shipTopple: shipTopple,
+    shipSink: shipSink,
+    shipReset: shipReset,
     swapScreens: swapScreens
   };
 })(window);

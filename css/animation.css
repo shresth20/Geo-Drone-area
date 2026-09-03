@@ -185,17 +185,132 @@
 }
 
 
+/* ---------------------------------------------------------- the landing
+   The craft's own motion, all of it pivoting on the middle of its
+   base (see .ship__craft's transform-origin) so every one of these
+   reads as a thing standing on the ground rather than a sprite
+   being rotated about its middle. */
+
+/* waiting to be told where to go */
+@keyframes shipBob {
+  0%, 100% { transform: translateY(0)     rotate(0); }
+  50%      { transform: translateY(-3.2%) rotate(.8deg); }
+}
+
+/* TOO SMALL: the craft is wider than the land it is standing on, so
+   it never gets a grip. High-frequency judder, growing, no travel —
+   it is trying to hold still and failing. */
+@keyframes shipTremble {
+  0%   { transform: translate(0, 0) rotate(0); }
+  12%  { transform: translate(-.7%, 0) rotate(-1deg); }
+  25%  { transform: translate(.9%, .3%) rotate(1.4deg); }
+  37%  { transform: translate(-1.2%, 0) rotate(-1.9deg); }
+  50%  { transform: translate(1.4%, .4%) rotate(2.3deg); }
+  62%  { transform: translate(-1.8%, 0) rotate(-2.9deg); }
+  75%  { transform: translate(2.1%, .6%) rotate(3.4deg); }
+  87%  { transform: translate(-2.5%, 0) rotate(-4deg); }
+  100% { transform: translate(2.2%, .8%) rotate(4.4deg); }
+}
+
+/* TOO LARGE: it is standing on plenty of land but nothing is
+   holding it in place, so it rocks heel to heel — slow, and each
+   swing further over than the last. */
+@keyframes shipWobble {
+  0%   { transform: rotate(0); }
+  14%  { transform: rotate(-4deg); }
+  30%  { transform: rotate(5.5deg); }
+  46%  { transform: rotate(-8deg); }
+  62%  { transform: rotate(10deg); }
+  78%  { transform: rotate(-13deg); }
+  100% { transform: rotate(15deg); }
+}
+
+/* the moment it fits: a short settling squash, then still */
+@keyframes shipSettle {
+  0%   { transform: translateY(-2.4%) scale(1); }
+  38%  { transform: translateY(.6%) scale(1.02, .97); }
+  68%  { transform: translateY(-.5%) scale(.995, 1.01); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+/* the pads breaching, gentler than the survey screen's — these are
+   being offered to the player, not discovered */
+@keyframes padRise {
+  0%   { opacity: 0; transform: translateY(26%) scale(.8); }
+  60%  { opacity: 1; transform: translateY(-3%) scale(1.035); }
+  82%  { transform: translateY(1.2%) scale(.995); }
+  100% { opacity: 1; transform: none; }
+}
+
+/* the ring that says "you may put it here" */
+@keyframes padBeckon {
+  0%, 100% { opacity: .25; transform: translate(-50%, -50%) scale(.9); }
+  50%      { opacity: .9;  transform: translate(-50%, -50%) scale(1.04); }
+}
+
+/* the verdict traced on the landing surface */
+@keyframes fitPulse {
+  0%   { opacity: 0; transform: scale(1.12); }
+  22%  { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.06); }
+}
+
+@keyframes fitFlash {
+  0%, 100% { opacity: 0; }
+  40%      { opacity: 1; }
+}
+
+/* going in */
+@keyframes splashFoam {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(.2); }
+  18%  { opacity: 1; transform: translate(-50%, -58%) scale(1.05); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.7); }
+}
+
+@keyframes splashOut {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(.22); }
+  16%  { opacity: .85; }
+  100% { opacity: 0; transform: translate(-50%, -46%) scale(2.4); }
+}
+
+
 /* ---------------------------------------------------------- reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .dash__sheen,
   .starfield i,
+  .gate__sheen,
   .launch__ring { animation: none !important; }
+
+  /* the gate button must still arrive, just without the rise */
+  .gate__btn.is-in,
+  .gate__hint.is-in { animation: none; opacity: 1; }
 
   /* the invitation and the idle drifts are decoration; the pick,
      refuse and sink animations carry meaning, so they stay */
   .zones.is-picking .zone.is-up:not(.is-picked) .zone__img,
   .target__art img,
+  .ship.is-in .ship__craft,
+  .pads.is-choosing .pad.is-up .pad__ring,
   .topbar__text.is-typing .tw__caret { animation: none !important; }
 
+  /* the ring is the only cue that a pad can be chosen, so with the
+     pulse switched off it has to be shown outright */
+  .pads.is-choosing .pad.is-up .pad__ring { opacity: .7; }
+
   .screen { transition-duration: .3s, .3s, .3s, 0s; }
+}
+
+/* ---------------------------------------------------------- start gate */
+
+/* the highlight sweeping the loading plate */
+@keyframes gateSheen {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* the button and its hint arriving once the mission is ready */
+@keyframes gateRise {
+  0%   { opacity: 0; transform: translateY(14px) scale(.92); }
+  55%  { opacity: 1; }
+  100% { opacity: 1; transform: none; }
 }

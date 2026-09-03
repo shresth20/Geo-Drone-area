@@ -714,7 +714,15 @@ button { font: inherit; color: inherit; }
 }
 
 .zone.is-picked .zone__pick { animation: pickStamp .5s cubic-bezier(.2, 1.5, .4, 1) .1s forwards; }
-.zone.is-picked .zone__hit  { pointer-events: none; }
+
+/* The tick lives inside the hit target, which otherwise fades out
+   with `.is-picking` when the task ends. Keep a picked zone's
+   button visible (but dead to clicks): the ticks are the record of
+   what the player chose, and the payoff line points back at them. */
+.zone.is-picked .zone__hit {
+  opacity: 1;
+  pointer-events: none;
+}
 
 /* --- wrong pick: a short, unmistakable no --- */
 .zone.is-wrong .zone__img {
@@ -900,17 +908,21 @@ button { font: inherit; color: inherit; }
 
 .topbar__badge circle { fill: #06152e; }
 
+/* Set in Baskerville, sentence case: the bar carries the
+   commander's spoken line, so it reads as speech rather than as
+   machine-printed chrome. The serif runs wider and taller per em
+   than the Poppins it replaced, so the size and tracking come
+   down to keep the longest line on one row inside the plate. */
 .topbar__text {
   flex: 1 1 auto;
   margin: 0;
   min-width: 0;
   text-align: center;
-  font-family: "Poppins", "Segoe UI", system-ui, sans-serif;
-  font-weight: 800;
-  font-size: clamp(10px, 1.42vw, 25px);
-  line-height: 1.22;
-  letter-spacing: .045em;
-  text-transform: uppercase;
+  font-family: "Libre Baskerville", Georgia, "Times New Roman", serif;
+  font-weight: 700;
+  font-size: clamp(9px, 1.18vw, 21px);
+  line-height: 1.3;
+  letter-spacing: .012em;
   color: #f2fbff;
   text-shadow:
     0 2px 10px rgba(0, 0, 0, .75),
@@ -1029,6 +1041,377 @@ button { font: inherit; color: inherit; }
   filter: drop-shadow(0 6px 14px rgba(0, 0, 0, .55));
   animation: targetHover 3.4s ease-in-out infinite;
 }
+
+
+/* ============================================================
+   SCREEN 3 — THE LANDING
+
+   Layout runs off ONE unit, --pu, so the whole tableau keeps its
+   proportions at every aspect ratio. It is min(vw, vh-ish) because
+   a row of three triangles is width-hungry but the descent needs
+   height: whichever axis is scarcer sets the size, and neither the
+   pads nor the ship's callouts ever run off the frame.
+
+   Every anchor below is expressed against a shape's BASE LINE
+   rather than its box, because that is the line the artwork reads
+   as the ground and the line the ship has to touch down on.
+   ============================================================ */
+.screen--landing {
+  --pu: min(1vw, 1.74vh);
+
+  /* all three pads sit their base line on this row — the shared
+     line is what makes them read as one shore. High enough that the
+     largest pad's rocky skirt clears the caption underneath it. */
+  --base-y: 76%;
+
+  /* where the ship hovers before it is sent down */
+  --ship-y: 41%;
+
+  /* 16.47 = 17 × 0.9688. The 20-unit pad's box is 17 units wide,
+     and the ship's painted triangle is 3.1% wider inside its box
+     than the pad's top face is inside its own. Shrinking the ship
+     box by that factor makes the craft EXACTLY 20 units of land,
+     so a perfect fit is perfect on the pixel and not by eye. */
+  --ship-k: 16.47;
+}
+
+.s4-bg { background-image: url("../assets/images/s4-bg.png"); }
+
+
+/* ---------------------------------------------------------- the spaceship
+   Two nested elements on purpose:
+     .ship        owns the FLIGHT — hover height, descent, topple,
+                  sinking. transform-origin is the box corner so JS
+                  can drive it with plain translate/scale arithmetic.
+     .ship__craft owns the CRAFT'S OWN motion — idle bob, trembling,
+                  rocking, pivoting on its base. Keeping the two
+                  apart means a wobble never has to know where the
+                  ship is, and a descent never has to cancel a
+                  wobble to do its own maths. */
+.ship {
+  position: absolute;
+  z-index: 5;
+  width: calc(var(--ship-k) * var(--pu));
+  aspect-ratio: 1;
+  /* the ship's BASE CENTRE hovers over (50%, --ship-y) */
+  left: calc(50% - 0.4984 * var(--ship-k) * var(--pu));
+  top: calc(var(--ship-y) - 0.698 * var(--ship-k) * var(--pu));
+  transform-origin: 0 0;
+  opacity: 0;
+  transition: opacity .9s ease;
+}
+.ship.is-in { opacity: 1; }
+
+.ship__craft {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  /* the middle of the base: the craft pivots on the ground, which
+     is what makes a topple look like a topple and not a spin */
+  transform-origin: 49.84% 69.8%;
+}
+
+.ship.is-in .ship__craft { animation: shipBob 3.6s ease-in-out infinite; }
+
+.ship__img {
+  width: 100%;
+  filter:
+    drop-shadow(0 14px 26px rgba(0, 0, 0, .5))
+    drop-shadow(0 0 30px rgba(90, 200, 255, .35));
+}
+
+
+/* ---------------------------------------------------------- dimension callouts */
+.ship__dims {
+  position: absolute;
+  left: -28%;
+  top: -6%;
+  width: 132%;
+  height: 132%;
+  overflow: visible;
+  opacity: 0;
+  transition: opacity .7s ease;
+}
+.ship__dims.is-drawn { opacity: 1; }
+
+.ship__dims path { fill: none; }
+
+/* The perpendicular height, drawn down through the craft. Dark
+   rather than pale: this one line crosses a bright silver hull and
+   a lit porthole, where the cyan used everywhere else vanishes. The
+   light halo keeps it readable where it leaves the hull. */
+.dim__inner {
+  stroke: #0c5f88;
+  stroke-width: 1.4;
+  stroke-dasharray: 5 3.4;
+  filter: drop-shadow(0 0 1.8px rgba(236, 252, 255, .95));
+}
+
+/* the small square that says "this height is PERPENDICULAR" */
+.dim__square {
+  stroke: #0c5f88;
+  stroke-width: 1.3;
+  filter: drop-shadow(0 0 1.6px rgba(236, 252, 255, .9));
+}
+
+.dim__ext {
+  stroke: rgba(150, 225, 255, .5);
+  stroke-width: .8;
+}
+
+.dim__line {
+  stroke: #7fe6ff;
+  stroke-width: 1.2;
+  filter: drop-shadow(0 0 3px rgba(40, 190, 255, .8));
+}
+
+.dim__tip { fill: #7fe6ff; stroke: none; }
+
+.dim__text {
+  fill: #f2fbff;
+  font-family: "Poppins", "Segoe UI", system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 9px;
+  letter-spacing: .04em;
+  text-anchor: middle;
+  /* a dark outline UNDER the glyphs: the callouts cross open water
+     and lit ripples, where plain white text disappears */
+  stroke: rgba(3, 14, 30, .92);
+  stroke-width: 2.6;
+  paint-order: stroke fill;
+}
+
+/* the callouts have done their job once the player has chosen, and
+   the idle bob has to stop or it fights every animation the landing
+   puts on this same element */
+.ship.is-committed .ship__dims { opacity: 0; }
+.ship.is-committed .ship__craft { animation: none; }
+
+/* what happens after touchdown. These are the three verdicts; the
+   topple, the fall and the sinking are driven from JS instead,
+   because where the craft goes over depends on which pad it is
+   standing on (see padPlan in js/animation.js). */
+.ship.is-planted .ship__craft { animation: shipSettle .74s cubic-bezier(.2, 1, .3, 1) forwards; }
+.ship.is-teeter  .ship__craft { animation: shipTremble 1.15s cubic-bezier(.36, .07, .19, .97) forwards; }
+.ship.is-rock    .ship__craft { animation: shipWobble 1.6s cubic-bezier(.45, .05, .55, .95) forwards; }
+
+
+/* ---------------------------------------------------------- landing pads */
+.pads {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.pad {
+  position: absolute;
+  width: calc(var(--k) * var(--pu));
+  aspect-ratio: 1;
+  /* the pad's top-face BASE CENTRE lands on (--cx, --base-y) */
+  left: calc(var(--cx) - 0.495 * var(--k) * var(--pu));
+  top: calc(var(--base-y) - 0.700 * var(--k) * var(--pu));
+}
+
+/* --k = 17 × sqrt(area / 20), so the DRAWN areas are in true
+   proportion to the numbers printed on them, and the 20-unit pad
+   comes out exactly the size of the ship */
+.pad--l { --k: 20.82; --cx: 21%; }   /* 30 sq units — too much room */
+.pad--m { --k: 13.17; --cx: 50%; }   /* 12 sq units — too small     */
+.pad--r { --k: 17.00; --cx: 79%; }   /* 20 sq units — the fit       */
+
+.pad__img {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  opacity: 0;
+  transform: translateY(26%) scale(.8);
+  filter: drop-shadow(0 14px 24px rgba(0, 0, 0, .5));
+  will-change: transform, opacity;
+  transition: filter .35s ease;
+}
+
+.pad.is-up .pad__img {
+  opacity: 1;
+  animation: padRise 1.15s cubic-bezier(.2, .9, .3, 1) forwards;
+}
+
+/* the printed area, sat in the middle of the painted surface */
+.pad__area {
+  position: absolute;
+  left: 49.5%;
+  /* 52%, not the true centroid at 49%: the triangle widens downward,
+     so a touch below centre is where it LOOKS centred — and it keeps
+     the smallest pad's caption off its rocky rim */
+  top: 52%;
+  z-index: 3;
+  margin: 0;
+  display: grid;
+  justify-items: center;
+  gap: .1em;
+  transform: translate(-50%, -50%) scale(.7);
+  font-family: "Poppins", "Segoe UI", system-ui, sans-serif;
+  line-height: 1;
+  color: #2a1405;
+  text-shadow: 0 1px 0 rgba(255, 232, 202, .55);
+  opacity: 0;
+  transition: opacity .5s ease, transform .6s cubic-bezier(.22, 1, .36, 1);
+  pointer-events: none;
+}
+
+.pad.is-up .pad__area {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+  transition-delay: .5s;
+}
+
+/* sized off the pad's OWN width, so the number reads the same
+   against every triangle instead of swamping the small one */
+.pad__area b {
+  font-weight: 800;
+  font-size: calc(var(--k) * var(--pu) * .2);
+}
+
+.pad__area i {
+  font-style: normal;
+  font-weight: 700;
+  font-size: calc(var(--k) * var(--pu) * .072);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  opacity: .8;
+}
+
+
+/* ---------------------------------------------------------- choosing a pad */
+.pad__hit {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  padding: 0;
+  border: 0;
+  background: none;
+  -webkit-tap-highlight-color: transparent;
+  /* the hit shape is the painted surface, not the square box: the
+     pads stand close together and a square target would let a tap
+     aimed at one triangle's empty corner land on its neighbour */
+  clip-path: polygon(50.6% 7.6%, 93% 70%, 6% 70%);
+  opacity: 0;
+  pointer-events: none;
+  cursor: pointer;
+  transition: opacity .3s ease;
+}
+
+.pads.is-choosing .pad.is-up .pad__hit {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.pad__hit:focus-visible { outline: none; }
+
+/* the invitation ring, sat on the surface the ship would touch */
+/* Sat tight on the base line, and flat: a taller ellipse put its
+   top arc straight through the printed area and read as a stray
+   line drawn across the number. */
+.pad__ring {
+  position: absolute;
+  left: 49.5%;
+  top: 71%;
+  width: 84%;
+  aspect-ratio: 5 / 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: max(2px, .16vw) solid rgba(150, 235, 255, .75);
+  box-shadow: 0 0 18px rgba(120, 220, 255, .5);
+  opacity: 0;
+}
+
+.pads.is-choosing .pad.is-up .pad__ring { animation: padBeckon 2.4s ease-in-out infinite; }
+
+@media (hover: hover) {
+  .pads.is-choosing .pad.is-up:hover .pad__img {
+    filter:
+      drop-shadow(0 16px 28px rgba(0, 0, 0, .55))
+      drop-shadow(0 0 26px rgba(140, 225, 255, .85));
+  }
+}
+
+.pads.is-choosing .pad.is-up:has(.pad__hit:focus-visible) .pad__img {
+  filter:
+    drop-shadow(0 16px 28px rgba(0, 0, 0, .55))
+    drop-shadow(0 0 0 3px rgba(140, 225, 255, .95))
+    drop-shadow(0 0 30px rgba(140, 225, 255, .85));
+}
+
+/* Outline of the surface the ship was asked to fit onto: green
+   where it fitted, amber where it rattled around inside, red where
+   it hung over the edges. Traced on the measured top face, so the
+   outline is the actual land and not a decoration near it. */
+.pad__fit {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  overflow: visible;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pad__fit path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 4px currentColor);
+}
+
+.pad.is-fit   .pad__fit { color: #3ff5c0; opacity: 1; animation: fitPulse 1.5s ease-out 2; }
+.pad.is-loose .pad__fit { color: #ffbe3d; opacity: 1; animation: fitFlash .5s ease-out 3; }
+.pad.is-tight .pad__fit { color: #ff5b4e; opacity: 1; animation: fitFlash .45s ease-out 3; }
+
+
+/* ---------------------------------------------------------- water impact
+   Parked over the point the craft actually went in, by JS — the
+   impact is wherever it toppled off to, not a fixed spot. */
+.splash {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 4;
+  width: calc(17 * var(--pu));
+  aspect-ratio: 1;
+  margin-left: calc(-8.5 * var(--pu));
+  margin-top: calc(-8.5 * var(--pu));
+  pointer-events: none;
+  opacity: 0;
+}
+.splash.is-on { opacity: 1; }
+
+.splash__foam,
+.splash__ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(.2);
+  opacity: 0;
+}
+
+.splash__foam {
+  width: 100%;
+  aspect-ratio: 2.6 / 1;
+  background: radial-gradient(closest-side, rgba(238, 251, 255, .92), rgba(190, 235, 255, 0) 72%);
+  filter: blur(3px);
+}
+
+.splash__ring {
+  width: 84%;
+  aspect-ratio: 3 / 1;
+  border: 2px solid rgba(196, 240, 255, .7);
+  box-shadow: 0 0 16px rgba(150, 225, 255, .45);
+}
+
+.splash.is-on .splash__foam    { animation: splashFoam 1.1s ease-out forwards; }
+.splash.is-on .splash__ring    { animation: splashOut 1.9s ease-out .06s forwards; }
+.splash.is-on .splash__ring--b { animation: splashOut 2.2s ease-out .34s forwards; }
 
 
 /* ============================================================
@@ -1172,6 +1555,105 @@ button { font: inherit; color: inherit; }
   text-shadow: 0 0 44px rgba(60, 180, 255, .7);
 }
 
+/* ---------------------------------------------------------- gate loader
+
+   The loader and the button are stacked in one grid cell so the
+   hand-off happens in place: the title does not jump up the screen
+   at the moment the mission becomes ready. The slot is sized off the
+   taller of the two (the loader) so neither state can shrink it. */
+.gate__slot {
+  display: grid;
+  place-items: center;
+  min-height: clamp(74px, 9vh, 108px);
+}
+.gate__slot > * { grid-area: 1 / 1; }
+.gate__slot > [hidden] { display: none; }
+
+.gate__load {
+  width: clamp(210px, 26vw, 380px);
+  transition: opacity .34s ease, transform .34s ease;
+}
+.gate__load.is-done {
+  opacity: 0;
+  transform: scale(.96);
+}
+
+/* chamfered plate, cut to the same corners as the mission bar */
+.gate__bar {
+  position: relative;
+  height: clamp(8px, 1.1vh, 13px);
+  overflow: hidden;
+  clip-path: polygon(
+    0 4px, 4px 0,
+    calc(100% - 4px) 0, 100% 4px,
+    100% calc(100% - 4px), calc(100% - 4px) 100%,
+    4px 100%, 0 calc(100% - 4px));
+  background: linear-gradient(180deg, rgba(6, 20, 42, .95), rgba(4, 12, 28, .95));
+  box-shadow:
+    inset 0 0 0 1px rgba(79, 216, 255, .42),
+    inset 0 2px 6px rgba(0, 0, 0, .7);
+}
+
+/* scaled rather than sized: the bar is repainted every frame while
+   the assets land, and a transform keeps that off the layout path */
+.gate__fill {
+  position: absolute;
+  inset: 0;
+  transform: scaleX(0);
+  transform-origin: left center;
+  background: linear-gradient(90deg, #1a8fd0, #43c8f5 55%, #b7f0ff);
+  box-shadow: 0 0 18px rgba(70, 200, 255, .75);
+}
+
+/* a highlight running the length of the plate, so the bar still
+   reads as working during a stall on one slow file */
+.gate__sheen {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg,
+    rgba(255, 255, 255, 0) 38%,
+    rgba(255, 255, 255, .38) 50%,
+    rgba(255, 255, 255, 0) 62%);
+  transform: translateX(-100%);
+  animation: gateSheen 1.5s ease-in-out infinite;
+}
+
+/* five hairlines, so the fill is read against something */
+.gate__ticks {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: space-evenly;
+  pointer-events: none;
+}
+.gate__ticks i {
+  width: 1px;
+  background: rgba(3, 12, 26, .55);
+}
+
+.gate__status {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1em;
+  margin: .85em 0 0;
+  font-family: "Poppins", "Segoe UI", system-ui, sans-serif;
+  font-weight: 700;
+  font-size: clamp(8px, .72vw, 12px);
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: rgba(150, 232, 255, .8);
+}
+
+.gate__pct {
+  font-weight: 800;
+  letter-spacing: .08em;
+  color: #d8f4ff;
+  /* tabular figures: the readout must not shuffle sideways as it
+     runs 8% -> 88% */
+  font-variant-numeric: tabular-nums;
+}
+
 .gate__btn {
   position: relative;
   padding: .85em 2.6em;
@@ -1191,6 +1673,15 @@ button { font: inherit; color: inherit; }
   transition: transform .1s ease, box-shadow .1s ease;
 }
 
+/* `backwards` rather than `both`: once the entry has played the
+   animation stops contributing a transform, which leaves the press
+   state below free to move the button again. */
+.gate__btn { opacity: 0; }
+.gate__btn.is-in {
+  opacity: 1;
+  animation: gateRise .62s cubic-bezier(.22, 1, .36, 1) backwards;
+}
+
 .gate__btn:active {
   transform: translateY(6px);
   box-shadow:
@@ -1200,15 +1691,30 @@ button { font: inherit; color: inherit; }
     inset 0 2px 4px rgba(255, 255, 255, .55);
 }
 
+/* held out of view rather than out of the flow: the line reserves
+   its height from the first frame, so the reveal swaps the loader
+   for the button without the title stepping up the screen */
 .gate__hint {
+  opacity: 0;
+  visibility: hidden;
   margin: 1.8em 0 0;
   font-size: clamp(10px, 1.15vw, 15px);
   letter-spacing: .1em;
   color: rgba(180, 215, 240, .6);
 }
 
+.gate__hint.is-in {
+  opacity: 1;
+  visibility: visible;
+  animation: gateRise .62s cubic-bezier(.22, 1, .36, 1) .1s backwards;
+}
+
 
 /* ---------------------------------------------------------- a11y */
 .is-reduced .dash__sheen,
 .is-reduced .starfield i,
+.is-reduced .gate__sheen,
 .is-reduced .launch__ring { animation: none !important; }
+
+.is-reduced .gate__btn.is-in,
+.is-reduced .gate__hint.is-in { animation: none; }

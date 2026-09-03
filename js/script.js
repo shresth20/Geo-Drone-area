@@ -30,6 +30,15 @@
      → "correct! these landing zones have the same shape as the
         spaceship"
 
+   Screen 3 · the landing
+     the craft rises with its base and height called out
+     → "next, we need to find how much space the spaceship needs"
+     → three pads surface, each with its area printed on it
+     → "calculate the area of spaceship, and select the land with
+        required area"
+     → the player picks; the craft flies down and the geometry
+       decides what happens (see SCREEN 3 below)
+
    The "<" / ">" nav can cut in at any point, so each screen is
    described as a list of steps run under a generation id. Jumping
    bumps that id, which makes the abandoned chain unwind at its next
@@ -74,7 +83,9 @@
     lookShapes: 'Look at the shapes of the landing zones.',
     pickTriangles: 'The spaceship is a triangle. Select all the triangular landing zones.',
     shapeMatch: 'Correct! These landing zones have the same shape as the spaceship.',
-    tryAgain: 'Try again.'
+    tryAgain: 'Try again.',
+    spaceNeeded: 'Next, we need to find how much space the spaceship needs.',
+    calcArea: 'Calculate the area of spaceship, and select the land with required area.'
   };
 
   function grab() {
@@ -82,9 +93,12 @@
       'stage', 'screenCockpit', 'screenDrone', 'starfield',
       'flyDrone', 'flyTrail', 'dash', 'waveCanvas', 'cockpitCaption',
       'launchSlot', 'launchBtn', 'oceanBg', 'blackout', 'scanner',
-      'zones', 'hud', 'hudCaption', 'hudTally',
+      'zones',
       'topbar', 'topbarText', 'target',
-      'veil', 'gate', 'gateBtn', 'nav', 'navPrev', 'navNext'
+      'screenLanding', 'ship', 'shipCraft', 'shipDims', 'pads', 'splash',
+      'landHud', 'landCaption', 'landTally', 'landTopbar', 'landTopbarText',
+      'veil', 'gate', 'gateBtn', 'gateHint', 'gateLoad', 'gateFill',
+      'gateStatus', 'gatePct', 'nav', 'navPrev', 'navNext'
     ].forEach(function (id) { el[id] = document.getElementById(id); });
   }
 
@@ -133,17 +147,17 @@
      the voice clip itself rather than off a chars/second guess —
      GeoAudio hands the <audio> element over through `onPlay`, and
      GeoType reads currentTime off it. See js/typewriter.js. */
-  function narrate(key) {
+  function narrate(bar, key) {
     var text = LINE[key] || '';
 
     if (M.reduced()) {
-      T.set(el.topbarText, text);
+      T.set(bar, text);
       return A.say(key).then(function () { return M.wait(260); });
     }
 
     return A.say(key, {
       onPlay: function (audio) {
-        T.type(el.topbarText, text, { audio: audio, hold: 260 });
+        T.type(bar, text, { audio: audio, hold: 260 });
       }
     }).then(function () {
       return M.wait(300);
@@ -239,9 +253,6 @@
     el.oceanBg.classList.remove('is-lit');
     el.blackout.classList.remove('is-clear');
     el.scanner.classList.remove('is-on');
-    el.hud.classList.remove('is-on');
-    el.hudCaption.classList.remove('is-shown');
-    el.hudCaption.textContent = '';
 
     var bar = el.scanner.querySelector('.scanner__bar');
     if (bar && bar.getAnimations) {
@@ -256,9 +267,6 @@
     endPicking();
     picked = 0;
 
-    el.hudTally.classList.remove('is-shown');
-    el.hudTally.textContent = '';
-
     el.topbar.classList.remove('is-on');
     T.clear(el.topbarText);
     el.target.classList.remove('is-on');
@@ -268,29 +276,29 @@
     W.stop();
 
     return sequence([
+      /* the bar drops in empty and then carries every line on this
+         screen — there is no caption over the water any more, so it
+         has to be up before the first voice clip, not partway in */
       function () {
-        el.hud.classList.add('is-on');
+        el.topbar.classList.add('is-on');
         A.duckAmbience(0.18, 900);
-        return M.wait(520);
+        return M.wait(720);
       },
 
       /* --- the dark --- */
-      function () { return speak(el.hudCaption, 'tooDark'); },
+      function () { return narrate('tooDark'); },
       function () { return M.wait(220); },
 
       /* --- call for the scanner --- */
-      function () { return speak(el.hudCaption, 'startScan'); },
+      function () { return narrate('startScan'); },
 
       /* --- red line sweeps the feed --- */
       function () {
-        el.hudCaption.textContent = 'SCANNING SURFACE…';
-        el.hudCaption.classList.add('is-shown');
         return M.sweep(el.scanner, { legs: 4, legMs: 1150 });
       },
 
       /* --- lights up: ocean 0 → 1 --- */
       function () {
-        el.hudCaption.classList.remove('is-shown');
         el.oceanBg.classList.add('is-lit');
         el.blackout.classList.add('is-clear');
         return M.wait(1700);
@@ -301,24 +309,12 @@
       function () { return M.wait(420); },
 
       /* --- payoff line --- */
-      function () { return speak(el.hudCaption, 'foundZones'); },
-      function () {
-        el.hudCaption.textContent = 'FIVE LANDING ZONES IDENTIFIED';
-        el.hudCaption.classList.add('is-shown');
-        return M.wait(900);
-      },
+      function () { return narrate('foundZones'); },
+      function () { return M.wait(420); },
 
       /* ═══════════════ shape hunt ═══════════════ */
 
-      /* the narration bar drops in empty, so the first typed line
-         is not competing with the bar's own arrival */
-      function () {
-        el.hudCaption.classList.remove('is-shown');
-        el.topbar.classList.add('is-on');
-        return M.wait(720);
-      },
-
-      function () { return narrate('lookShapes'); },
+      function () { return narrate(el.topbarText, 'lookShapes'); },
 
       /* the ship goes up BEFORE it is mentioned, so it is already
          there to be looked at when the line names it */
@@ -327,26 +323,18 @@
         return M.wait(560);
       },
 
-      function () { return narrate('pickTriangles'); },
+      function () { return narrate(el.topbarText, 'pickTriangles'); },
 
       /* --- over to the player --- */
       function (id) { return startPicking(id); },
 
       /* --- the odd shapes go back under --- */
-      function () {
-        el.hudCaption.classList.remove('is-shown');
-        el.hudTally.classList.remove('is-shown');
-        return M.wait(420);
-      },
+      function () { return M.wait(420); },
       function () { return sinkOthers(); },
       function () { return M.wait(360); },
 
       /* --- payoff --- */
-      function () { return narrate('shapeMatch'); },
-      function () {
-        el.hudCaption.textContent = 'THREE TRIANGULAR LANDING ZONES CONFIRMED';
-        el.hudCaption.classList.add('is-shown');
-      }
+      function () { return narrate(el.topbarText, 'shapeMatch'); }
     ]);
   }
 
@@ -369,12 +357,6 @@
 
   function zoneList() {
     return Array.prototype.slice.call(el.zones.querySelectorAll('.zone'));
-  }
-
-  function tally() {
-    el.hudTally.textContent =
-      'TRIANGLES SELECTED · ' + picked + ' / ' + needed;
-    el.hudTally.classList.add('is-shown');
   }
 
   /* Hands the feed over to the player and resolves once every
@@ -400,10 +382,6 @@
       var hit = z.querySelector('.zone__hit');
       if (hit) hit.tabIndex = 0;
     });
-
-    el.hudCaption.textContent = 'TAP EVERY TRIANGLE';
-    el.hudCaption.classList.add('is-shown');
-    tally();
 
     return new Promise(function (resolve) {
       releasePick = resolve;
@@ -455,10 +433,8 @@
     zone.classList.add('is-picked');
     picked++;
     A.sfx('correct', { volume: 0.55 });
-    tally();
 
     if (picked >= needed) {
-      el.hudCaption.textContent = 'ALL TRIANGLES FOUND';
       /* let the last tick land before the flow moves on */
       M.wait(760).then(endPicking);
     }
@@ -487,11 +463,268 @@
 
 
   /* ============================================================
+     SCREEN 3 — THE LANDING
+
+     The ship is a triangle with a base of 8 units and a height of
+     5 units, so it needs 1/2 x 8 x 5 = 20 square units of land.
+     Three pads are offered: 30, 12 and 20.
+
+     The answer is never checked with a message. It is checked by
+     flying the craft down and letting the geometry speak:
+
+       12  the craft is wider than the land, hangs over both edges,
+           judders, loses its footing and goes into the water
+       30  the craft is standing on far more land than it needs with
+           nothing holding it, rocks heel to heel and topples off
+       20  it comes down, squares up and plants itself
+
+     The craft is drawn at its TRUE size on every attempt (see
+     padPlan in js/animation.js), so all three outcomes are the
+     honest consequence of the numbers, not three canned cutscenes.
+     ============================================================ */
+
+  var SHIP_AREA = 20;            /* 1/2 x 8 x 5 */
+  var choosing = false;
+  var landing = false;           /* an attempt is playing out */
+  var releaseLand = null;        /* resolves the "wait for the fit" step */
+  var solved = false;
+
+  function padList() {
+    return Array.prototype.slice.call(el.pads.querySelectorAll('.pad'));
+  }
+
+  function correctPad() {
+    return el.pads.querySelector('.pad[data-area="' + SHIP_AREA + '"]');
+  }
+
+  function resetLanding() {
+    choosing = false;
+    landing = false;
+    solved = false;
+
+    M.shipReset(el.ship, el.shipCraft);
+    el.ship.classList.remove('is-in', 'is-committed', 'is-planted');
+    el.ship.classList.remove('is-teeter', 'is-rock');
+    el.shipDims.classList.remove('is-drawn');
+
+    el.pads.classList.remove('is-choosing');
+    padList().forEach(function (pad) {
+      pad.classList.remove('is-up', 'is-fit', 'is-loose', 'is-tight');
+      var hit = pad.querySelector('.pad__hit');
+      if (hit) hit.tabIndex = -1;
+    });
+
+    el.splash.classList.remove('is-on');
+
+    el.landHud.classList.remove('is-on');
+    el.landCaption.classList.remove('is-shown');
+    el.landCaption.textContent = '';
+    el.landTally.classList.remove('is-shown');
+    el.landTally.textContent = '';
+
+    el.landTopbar.classList.remove('is-on');
+    T.clear(el.landTopbarText);
+
+    var done = releaseLand;
+    releaseLand = null;
+    if (done) done();
+  }
+
+  function runLanding() {
+    W.stop();
+
+    return sequence([
+      function () {
+        el.landHud.classList.add('is-on');
+        A.duckAmbience(0.16, 900);
+        return M.wait(520);
+      },
+
+      function () {
+        el.landTopbar.classList.add('is-on');
+        return M.wait(680);
+      },
+
+      /* the craft comes up while the line plays, and its
+         measurements are drawn on as the line lands — the callouts
+         ARE "how much space it needs" */
+      function () {
+        el.ship.classList.add('is-in');
+        M.wait(900).then(function () { el.shipDims.classList.add('is-drawn'); });
+        return narrate(el.landTopbarText, 'spaceNeeded');
+      },
+
+      /* the three candidates surface with their areas printed on */
+      function () { return offerPads(); },
+
+      function () { return narrate(el.landTopbarText, 'calcArea'); },
+
+      /* --- over to the player, for as many attempts as it takes --- */
+      function (id) { return startChoosing(id); },
+
+      /* --- planted --- */
+      function () {
+        el.landCaption.textContent = 'PERFECT FIT — 20 SQ UNITS';
+        el.landCaption.classList.add('is-shown');
+        el.landTally.textContent = 'AREA = ½ × 8 × 5 = 20';
+        el.landTally.classList.add('is-shown');
+      }
+    ]);
+  }
+
+  function offerPads() {
+    var pads = padList();
+    pads.forEach(function (pad, i) {
+      M.wait(i * 320).then(function () {
+        pad.classList.add('is-up');
+        A.sfx('rock', { volume: 0.42, rate: [1.04, 0.96, 1.1][i % 3] });
+      });
+    });
+    return M.wait((pads.length - 1) * 320 + 1250);
+  }
+
+  /* Same abort contract as the shape hunt: the step parks a promise
+     only the player can settle, and resetLanding() — which every
+     jump runs — settles it by hand so the next step unwinds on a
+     stale generation id. */
+  function startChoosing(id) {
+    armChoice();
+
+    el.landCaption.textContent = 'CHOOSE THE LANDING ZONE';
+    el.landCaption.classList.add('is-shown');
+    el.landTally.textContent = 'BASE 8 · HEIGHT 5';
+    el.landTally.classList.add('is-shown');
+
+    return new Promise(function (resolve) {
+      releaseLand = resolve;
+      if (!live(id)) resetLanding();
+    });
+  }
+
+  function armChoice() {
+    choosing = true;
+    el.pads.classList.add('is-choosing');
+    padList().forEach(function (pad) {
+      var hit = pad.querySelector('.pad__hit');
+      if (hit) hit.tabIndex = 0;
+    });
+  }
+
+  function disarmChoice() {
+    choosing = false;
+    el.pads.classList.remove('is-choosing');
+    padList().forEach(function (pad) {
+      var hit = pad.querySelector('.pad__hit');
+      if (hit) hit.tabIndex = -1;
+    });
+  }
+
+  function onPadPick(pad) {
+    if (!choosing || landing) return;
+
+    var area = +pad.dataset.area;
+    var ref = correctPad();
+    if (!ref) return;
+
+    landing = true;
+    disarmChoice();
+    A.sfx('click', { volume: 0.4 });
+
+    /* the callouts and the idle bob come off: the craft is flying
+       now, and a measurement drawing riding along with it through a
+       crash would read as part of the wreck */
+    el.ship.classList.add('is-committed');
+
+    var plan = M.padPlan(el.ship, pad, ref);
+
+    M.shipDescend(el.ship, plan).then(function () {
+      if (area === SHIP_AREA) return plant(pad, plan);
+      return fail(pad, plan, area < SHIP_AREA);
+    });
+  }
+
+  /* ---------------------------------------------------------- it fits */
+  function plant(pad, plan) {
+    solved = true;
+    el.ship.classList.add('is-planted');
+    pad.classList.add('is-fit');
+
+    el.landCaption.textContent = 'TOUCHDOWN';
+    el.landCaption.classList.add('is-shown');
+
+    A.sfx('correct', { volume: 0.6 });
+    M.wait(260).then(function () { A.sfx('cheer', { volume: 0.5 }); });
+
+    return M.wait(1500).then(function () {
+      landing = false;
+      var done = releaseLand;
+      releaseLand = null;
+      if (done) done();
+    });
+  }
+
+  /* ---------------------------------------------------------- it does not
+     `tight` true  → the pad was too small, the craft overhangs it
+     `tight` false → the pad was too big, nothing holds the craft */
+  function fail(pad, plan, tight) {
+    pad.classList.add(tight ? 'is-tight' : 'is-loose');
+
+    el.landCaption.textContent = tight
+      ? 'TOO SMALL — THE CRAFT OVERHANGS'
+      : 'TOO MUCH ROOM — THE CRAFT CANNOT SETTLE';
+    el.landCaption.classList.add('is-shown');
+    el.landTally.textContent = pad.dataset.area + ' SQ UNITS · NEEDED 20';
+
+    A.sfx('wrong', { volume: 0.45 });
+    el.ship.classList.add(tight ? 'is-teeter' : 'is-rock');
+
+    return M.wait(tight ? 1150 : 1600)
+      .then(function () {
+        return M.shipTopple(el.ship, el.shipCraft, plan);
+      })
+      .then(function (impact) {
+        /* the water is hit wherever it went over, not at a fixed
+           spot, so the splash is parked on the returned point */
+        el.splash.style.transform =
+          'translate(' + impact.x.toFixed(1) + 'px,' + impact.y.toFixed(1) + 'px)';
+        el.splash.classList.remove('is-on');
+        void el.splash.offsetWidth;          /* replay it on a retry */
+        el.splash.classList.add('is-on');
+        A.sfx('rock', { volume: 0.72, rate: 0.9 });
+        return M.shipSink(el.ship, plan);
+      })
+      .then(function () {
+        el.landCaption.classList.remove('is-shown');
+        return A.say('tryAgain');
+      })
+      .then(function () {
+        return M.wait(320);
+      })
+      .then(function () {
+        /* put it back on the pad rail and hand control over again */
+        pad.classList.remove('is-tight', 'is-loose');
+        el.ship.classList.remove('is-committed', 'is-teeter', 'is-rock');
+        M.shipReset(el.ship, el.shipCraft);
+        el.splash.classList.remove('is-on');
+        el.shipDims.classList.add('is-drawn');
+        return M.wait(700);
+      })
+      .then(function () {
+        landing = false;
+        if (!solved) armChoice();
+        el.landCaption.textContent = 'CHOOSE THE LANDING ZONE';
+        el.landCaption.classList.add('is-shown');
+        el.landTally.textContent = 'BASE 8 · HEIGHT 5';
+      });
+  }
+
+  /* ============================================================
      SCREENS + NAV
      ============================================================ */
   var SCREENS = [
     { node: function () { return el.screenCockpit; }, reset: resetCockpit,   run: runCockpit },
-    { node: function () { return el.screenDrone; },   reset: resetDroneFeed, run: runDroneFeed }
+    { node: function () { return el.screenDrone; },   reset: resetDroneFeed, run: runDroneFeed },
+    { node: function () { return el.screenLanding; }, reset: resetLanding,   run: runLanding }
   ];
 
   function syncNav() {
@@ -535,6 +768,156 @@
   }
 
   /* ============================================================
+     START GATE
+
+     The mission opens on a black cockpit and a voice line, so it
+     cannot start until the artwork and the narration are actually
+     in the browser — a half-loaded start means the commander talks
+     over an empty screen. The gate therefore holds the mission
+     until every asset has settled, and shows how far along it is
+     rather than a spinner that says nothing.
+     ============================================================ */
+
+  /* Read off the document rather than kept in a second list here:
+     the <link rel=preload> tags already name the backgrounds and
+     the zone/ship artwork is in the markup as <img>, so this cannot
+     drift out of step with the page. */
+  function imageUrls() {
+    var seen = {};
+    var out = [];
+
+    function add(u) {
+      if (!u || seen[u]) return;
+      seen[u] = true;
+      out.push(u);
+    }
+
+    Array.prototype.forEach.call(
+      document.querySelectorAll('link[rel="preload"][as="image"]'),
+      function (l) { add(l.href); }
+    );
+    Array.prototype.forEach.call(
+      document.images,
+      function (i) { add(i.currentSrc || i.src); }
+    );
+
+    return out;
+  }
+
+  /* A texture that 404s still counts: the bar must reach the end
+     even on a broken deploy, and a missing rock is survivable. */
+  function loadImages(list, onEach) {
+    return Promise.all(list.map(function (src) {
+      return new Promise(function (resolve) {
+        var img = new Image();
+        var fired = false;
+
+        function fire() {
+          if (fired) return;
+          fired = true;
+          onEach();
+          resolve();
+        }
+
+        img.onload = fire;
+        img.onerror = fire;
+        img.src = src;
+        if (img.complete) fire();
+      });
+    }));
+  }
+
+  /* what the readout says, by how far along the load is */
+  var STATUS = [
+    [0.00, 'Booting mission systems'],
+    [0.20, 'Charting the survey area'],
+    [0.48, 'Loading terrain scans'],
+    [0.76, 'Syncing commander briefing'],
+    [1.00, 'All systems ready']
+  ];
+
+  function statusFor(p) {
+    var label = STATUS[0][1];
+    for (var i = 0; i < STATUS.length; i++) {
+      if (p >= STATUS[i][0]) label = STATUS[i][1];
+    }
+    return label;
+  }
+
+  /* Two things are being waited on and they are not the same size,
+     so progress is counted in assets rather than in halves. */
+  var GATE_MIN_MS = 1150;       // a warm cache must still read as a load
+
+  function runGate() {
+    var imgs  = imageUrls();
+    var total = imgs.length + A.assetCount();
+    var done  = 0;
+    var shown = 0;              // where the bar actually is
+    var raf   = 0;
+    var t0    = performance.now();
+    var slow  = !M.reduced();
+
+    function draw(p) {
+      var pct = Math.round(p * 100);
+      el.gateFill.style.transform = 'scaleX(' + p.toFixed(4) + ')';
+      el.gatePct.textContent = pct + '%';
+
+      var label = statusFor(p);
+      if (el.gateStatus.textContent !== label) el.gateStatus.textContent = label;
+    }
+
+    /* Eased rather than stepped: on a warm cache thirty files settle
+       in the same frame, and a bar that teleports to 100% reads as a
+       glitch. The easing also keeps the readout moving while a slow
+       file is still in flight. */
+    function tick() {
+      var target = done / total;
+      shown += (target - shown) * 0.10;
+      if (target - shown < 0.0015) shown = target;
+      draw(shown);
+      raf = requestAnimationFrame(tick);
+    }
+
+    function count() { done++; if (!slow) draw(done / total); }
+
+    if (slow) raf = requestAnimationFrame(tick);
+    draw(0);
+
+    return Promise.all([
+      loadImages(imgs, count),
+      A.preload(count)
+    ]).then(function () {
+      /* let the easing run the last stretch out before handing over */
+      var rest = slow ? Math.max(0, GATE_MIN_MS - (performance.now() - t0)) + 520
+                      : Math.max(0, 300 - (performance.now() - t0));
+      return M.wait(rest);
+    }).then(function () {
+      if (raf) cancelAnimationFrame(raf);
+      draw(1);
+      return M.wait(slow ? 260 : 0);
+    }).then(revealStart);
+  }
+
+  function revealStart() {
+    el.gateLoad.classList.add('is-done');
+
+    return M.wait(M.reduced() ? 0 : 360).then(function () {
+      el.gateLoad.hidden = true;
+
+      el.gateBtn.hidden = false;
+      /* reflow, so the browser has an un-hidden starting frame to
+         transition away from instead of snapping straight to the end */
+      void el.gateBtn.offsetWidth;
+
+      el.gateBtn.classList.add('is-in');
+      el.gateHint.classList.add('is-in');
+
+      try { el.gateBtn.focus({ preventScroll: true }); } catch (e) { /* older browsers */ }
+    });
+  }
+
+
+  /* ============================================================
      BOOT
      ============================================================ */
   function begin() {
@@ -559,7 +942,8 @@
 
     M.starfield(el.starfield, 150);
     W.init(el.waveCanvas);
-    A.preload();
+
+    runGate();
 
     el.gateBtn.addEventListener('click', begin, { once: true });
     el.launchBtn.addEventListener('click', onLaunch);
@@ -571,6 +955,13 @@
       if (!hit) return;
       var zone = hit.closest('.zone');
       if (zone) onZonePick(zone);
+    });
+
+    el.pads.addEventListener('click', function (e) {
+      var hit = e.target.closest('.pad__hit');
+      if (!hit) return;
+      var pad = hit.closest('.pad');
+      if (pad) onPadPick(pad);
     });
 
     el.navPrev.addEventListener('click', function () { goTo(current - 1); });
