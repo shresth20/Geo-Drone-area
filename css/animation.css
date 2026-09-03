@@ -1,0 +1,201 @@
+/* ============================================================
+   Geo Drone — keyframes
+   ============================================================ */
+
+/* ---------------------------------------------------------- stars */
+@keyframes twinkle {
+  0%, 100% { opacity: 0; transform: scale(.6); }
+  50%      { opacity: var(--peak, .9); transform: scale(1); }
+}
+
+
+/* ---------------------------------------------------------- dashboard glass */
+@keyframes dashSheen {
+  0%   { transform: translateX(-38%); }
+  100% { transform: translateX(38%); }
+}
+
+
+/* ---------------------------------------------------------- launch button */
+@keyframes launchPop {
+  0%   { opacity: 0; transform: scale(.72); }
+  60%  { opacity: 1; transform: scale(1.05); }
+  100% { opacity: 1; transform: none; }
+}
+
+@keyframes launchRing {
+  0%   { box-shadow: 0 0 0 0 rgba(255, 68, 48, .55); }
+  70%  { box-shadow: 0 0 0 22px rgba(255, 68, 48, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 68, 48, 0); }
+}
+
+
+/* ---------------------------------------------------------- drone fly-out
+   Deliberately NOT here. The climb is generated step-by-step in
+   js/animation.js, because a CSS animation re-applies its timing
+   function between every pair of keyframes and that made the drone
+   brake at each stop on its way out. See flyDrone().              */
+
+
+/* ---------------------------------------------------------- veil sweep */
+@keyframes veilScan {
+  0%   { opacity: 0; transform: translateY(0); }
+  20%  { opacity: 1; }
+  80%  { opacity: 1; }
+  100% { opacity: 0; transform: translateY(300%); }
+}
+
+
+/* ---------------------------------------------------------- landing zones */
+@keyframes zoneRise {
+  0% {
+    opacity: 0;
+    transform: translateY(46%) scale(.62);
+  }
+  18% {
+    opacity: .55;
+    transform: translateY(30%) scale(.74);
+  }
+  62% {
+    opacity: 1;
+    transform: translateY(-5%) scale(1.05);
+  }
+  80% {
+    transform: translateY(2%) scale(.99);
+  }
+  92% {
+    transform: translateY(-1%) scale(1.005);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes zoneWake {
+  0%   { opacity: 0;   transform: translate(-50%, 40%) scale(.4); }
+  30%  { opacity: .95; transform: translate(-50%, 8%)  scale(1); }
+  100% { opacity: .55; transform: translate(-50%, 0)   scale(1.06); }
+}
+
+@keyframes zoneSplash {
+  0%   { opacity: 0;   transform: translate(-50%, 40%) scale(.3); }
+  22%  { opacity: 1;   transform: translate(-50%, 6%)  scale(1); }
+  100% { opacity: 0;   transform: translate(-50%, -4%) scale(1.5); }
+}
+
+@keyframes zoneRing {
+  0%   { opacity: 0;   transform: translate(-50%, 45%) scale(.25); }
+  15%  { opacity: .85; }
+  100% { opacity: 0;   transform: translate(-50%, 10%) scale(2.1); }
+}
+
+
+/* ---------------------------------------------------------- shape hunt
+   Picking a zone, and refusing one. */
+
+/* the idle invitation: shapes breathe while they are selectable */
+@keyframes zoneBeckon {
+  0%, 100% { transform: none; }
+  50%      { transform: translateY(-1.2%) scale(1.018); }
+}
+
+/* accepted: a firm little press-in, then it settles a touch larger
+   than it was, so a locked-in zone reads differently from the rest */
+@keyframes zonePicked {
+  0%   { transform: none; }
+  34%  { transform: translateY(1.5%) scale(.955); }
+  70%  { transform: translateY(-1%) scale(1.055); }
+  100% { transform: scale(1.035); }
+}
+
+/* refused: two quick shakes, no travel — it stays where it is */
+@keyframes zoneWrong {
+  0%, 100% { transform: none; }
+  15%      { transform: translateX(-3.5%) rotate(-2.2deg); }
+  38%      { transform: translateX(3.5%)  rotate(2.2deg); }
+  62%      { transform: translateX(-2.4%) rotate(-1.4deg); }
+  84%      { transform: translateX(1.8%)  rotate(.9deg); }
+}
+
+@keyframes pickStamp {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0); }
+  65%  { opacity: 1; transform: translate(-50%, -50%) scale(1.18); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+
+/* ---------------------------------------------------------- zones sinking
+   The mirror of zoneRise: a shape that does not match the ship
+   dips once — the water gathering around it — and then goes under.
+   The dip is what makes it look like it is being pulled down
+   rather than fading out on the spot. */
+@keyframes zoneSink {
+  0% {
+    opacity: 1;
+    transform: none;
+  }
+  16% {
+    opacity: 1;
+    transform: translateY(-3%) scale(1.02);
+  }
+  46% {
+    opacity: 1;
+    transform: translateY(14%) scale(.92);
+  }
+  78% {
+    opacity: .5;
+    transform: translateY(34%) scale(.74);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(50%) scale(.6);
+  }
+}
+
+@keyframes wakeClose {
+  0%   { opacity: .55; transform: translate(-50%, 0)   scale(1.06); }
+  40%  { opacity: .95; transform: translate(-50%, 6%)  scale(1.14); }
+  100% { opacity: 0;   transform: translate(-50%, 22%) scale(.5); }
+}
+
+/* foam thrown up as the surface closes over the shape */
+@keyframes splashClose {
+  0%   { opacity: 0; transform: translate(-50%, 24%) scale(.4); }
+  26%  { opacity: 1; transform: translate(-50%, 8%)  scale(1.05); }
+  100% { opacity: 0; transform: translate(-50%, 0)   scale(1.6); }
+}
+
+@keyframes ringClose {
+  0%   { opacity: 0;   transform: translate(-50%, 26%) scale(.3); }
+  18%  { opacity: .8; }
+  100% { opacity: 0;   transform: translate(-50%, 8%)  scale(2); }
+}
+
+
+/* ---------------------------------------------------------- narration bar */
+@keyframes caretBlink {
+  0%, 49%   { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+@keyframes targetHover {
+  0%, 100% { transform: translateY(0)      rotate(0); }
+  50%      { transform: translateY(-5%) rotate(-1.4deg); }
+}
+
+
+/* ---------------------------------------------------------- reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .dash__sheen,
+  .starfield i,
+  .launch__ring { animation: none !important; }
+
+  /* the invitation and the idle drifts are decoration; the pick,
+     refuse and sink animations carry meaning, so they stay */
+  .zones.is-picking .zone.is-up:not(.is-picked) .zone__img,
+  .target__art img,
+  .topbar__text.is-typing .tw__caret { animation: none !important; }
+
+  .screen { transition-duration: .3s, .3s, .3s, 0s; }
+}

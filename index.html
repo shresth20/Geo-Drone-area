@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#03050c" />
+  <title>Geo Drone — Landing Mission</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%23071427%27/%3E%3Ccircle cx=%2716%27 cy=%2717%27 r=%277%27 fill=%27%23eaf4ff%27/%3E%3Cpath d=%27M9 17h14%27 stroke=%27%232fd2ff%27 stroke-width=%272%27/%3E%3Cpath d=%27M4 11h6M22 11h6%27 stroke=%27%234fd8ff%27 stroke-width=%273%27 stroke-linecap=%27round%27/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/animation.css" />
+  <link rel="stylesheet" href="css/responsive.css" />
+
+  <link rel="preload" as="font" type="font/ttf" crossorigin
+        href="assets/fonts/libre_baskerville/librebaskerville-variablefont_wght.ttf" />
+  <!-- the HUD chrome (mission bar, tally, target chip) is set in this one -->
+  <link rel="preload" as="font" type="font/ttf" crossorigin
+        href="assets/fonts/poppins/poppins-extrabold.ttf" />
+
+  <link rel="preload" as="image" href="assets/images/s1-bg.png" />
+  <link rel="preload" as="image" href="assets/images/s1-cockpit-2.png" />
+  <link rel="preload" as="image" href="assets/images/s2-bg%20(2).png" />
+  <link rel="preload" as="image" href="assets/images/drone-screen.png" />
+  <link rel="preload" as="image" href="assets/images/drone.png" />
+  <link rel="preload" as="image" href="assets/images/Triangle.png" />
+  <link rel="preload" as="image" href="assets/images/Triangle%20spaceship.png" />
+</head>
+<body>
+
+<div class="stage" id="stage">
+
+  <!-- ══════════════════════════ SCREEN 1 — COCKPIT ══════════════════════════ -->
+  <section class="screen screen--cockpit is-active" id="screenCockpit">
+
+    <!-- deep space, stretched to fill -->
+    <div class="layer layer--bg s1-bg" aria-hidden="true"></div>
+
+    <!-- drifting stars seen through the canopy -->
+    <div class="starfield" id="starfield" aria-hidden="true"></div>
+
+    <!-- the drone flies out through the canopy: sits BELOW the cockpit frame -->
+    <div class="flyout" id="flyout" aria-hidden="true">
+      <div class="flyout__drone" id="flyDrone">
+        <span class="flyout__wash"></span>
+        <img src="assets/images/drone.png" alt="" />
+      </div>
+      <div class="flyout__trail" id="flyTrail"></div>
+    </div>
+
+    <!-- cockpit interior, stretched to fill, painted over the window -->
+    <div class="layer layer--cockpit s1-cockpit" aria-hidden="true"></div>
+
+    <!-- ░░ dashboard readout (the yellow box) ░░ -->
+    <div class="dash" id="dash">
+      <canvas class="dash__wave" id="waveCanvas"></canvas>
+      <div class="dash__grid" aria-hidden="true"></div>
+      <div class="dash__sheen" aria-hidden="true"></div>
+    </div>
+
+    <!-- narration subtitle, read against the canopy -->
+    <p class="subtitle" id="cockpitCaption" role="status" aria-live="polite"></p>
+
+    <!-- ░░ LAUNCH button (the green box) ░░ -->
+    <div class="launch-slot" id="launchSlot">
+      <button class="launch" id="launchBtn" type="button" aria-label="Launch the survey drone">
+        <span class="launch__ring" aria-hidden="true"></span>
+        <span class="launch__body">
+          <span class="launch__label">LAUNCH</span>
+        </span>
+      </button>
+    </div>
+
+  </section>
+
+
+  <!-- ══════════════════════════ SCREEN 2 — DRONE FEED ══════════════════════════ -->
+  <section class="screen screen--drone" id="screenDrone">
+
+    <!-- ocean, faded up once the scan completes -->
+    <div class="layer layer--bg s2-bg" id="oceanBg" aria-hidden="true"></div>
+
+    <!-- the dark: sits over the ocean until the scan lands -->
+    <div class="blackout" id="blackout" aria-hidden="true"></div>
+
+    <!-- five landing zones surfacing out of the water -->
+    <div class="zones" id="zones">
+      <div class="zone zone--a" data-shape="triangle">
+        <span class="zone__wake"></span>
+        <span class="zone__ring"></span>
+        <span class="zone__ring zone__ring--b"></span>
+        <span class="zone__splash"></span>
+        <img class="zone__img" src="assets/images/Triangle.png" alt="Large triangular landing zone" />
+        <button class="zone__hit" type="button" tabindex="-1"
+                aria-label="Large triangular landing zone">
+          <span class="zone__pick" aria-hidden="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 13 5 5L20 7" /></svg>
+          </span>
+        </button>
+      </div>
+      <div class="zone zone--b" data-shape="square">
+        <span class="zone__wake"></span>
+        <span class="zone__ring"></span>
+        <span class="zone__ring zone__ring--b"></span>
+        <span class="zone__splash"></span>
+        <img class="zone__img" src="assets/images/Square.png" alt="Square landing zone" />
+        <button class="zone__hit" type="button" tabindex="-1"
+                aria-label="Square landing zone">
+          <span class="zone__pick" aria-hidden="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 13 5 5L20 7" /></svg>
+          </span>
+        </button>
+      </div>
+      <div class="zone zone--c" data-shape="triangle">
+        <span class="zone__wake"></span>
+        <span class="zone__ring"></span>
+        <span class="zone__ring zone__ring--b"></span>
+        <span class="zone__splash"></span>
+        <img class="zone__img" src="assets/images/Triangle.png" alt="Medium triangular landing zone" />
+        <button class="zone__hit" type="button" tabindex="-1"
+                aria-label="Medium triangular landing zone">
+          <span class="zone__pick" aria-hidden="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 13 5 5L20 7" /></svg>
+          </span>
+        </button>
+      </div>
+      <div class="zone zone--d" data-shape="trapezium">
+        <span class="zone__wake"></span>
+        <span class="zone__ring"></span>
+        <span class="zone__ring zone__ring--b"></span>
+        <span class="zone__splash"></span>
+        <img class="zone__img" src="assets/images/Trapezium.png" alt="Trapezium landing zone" />
+        <button class="zone__hit" type="button" tabindex="-1"
+                aria-label="Trapezium landing zone">
+          <span class="zone__pick" aria-hidden="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 13 5 5L20 7" /></svg>
+          </span>
+        </button>
+      </div>
+      <div class="zone zone--e" data-shape="triangle">
+        <span class="zone__wake"></span>
+        <span class="zone__ring"></span>
+        <span class="zone__ring zone__ring--b"></span>
+        <span class="zone__splash"></span>
+        <img class="zone__img" src="assets/images/Triangle.png" alt="Small triangular landing zone" />
+        <button class="zone__hit" type="button" tabindex="-1"
+                aria-label="Small triangular landing zone">
+          <span class="zone__pick" aria-hidden="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 13 5 5L20 7" /></svg>
+          </span>
+        </button>
+      </div>
+    </div>
+
+    <!-- red scanner sweep -->
+    <div class="scanner" id="scanner" aria-hidden="true">
+      <div class="scanner__wash"></div>
+      <div class="scanner__bar">
+        <span class="scanner__core"></span>
+        <span class="scanner__glow"></span>
+      </div>
+    </div>
+
+    <!-- HUD frame, stretched to fill -->
+    <div class="layer layer--hud drone-hud" aria-hidden="true"></div>
+
+    <!-- HUD chrome that lives inside the frame -->
+    <div class="hud" id="hud">
+      <p class="hud__caption" id="hudCaption" role="status" aria-live="polite"></p>
+      <p class="hud__tally" id="hudTally" aria-hidden="true"></p>
+    </div>
+
+    <!-- ░░ narration bar — typed in step with the voice-over ░░ -->
+    <header class="topbar" id="topbar">
+      <div class="topbar__frame">
+        <span class="topbar__badge" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M13.2 2.6c3.6.5 6.4 3.3 6.9 6.9l.2 1.4-7.4 7.4-2.6-1.1-1.1-2.6 7.4-7.4-1.4-.2z" />
+            <path d="M9.4 14.6 5.9 18.1M8.2 11.9 4 12.7l1.6 1.6M12.1 15.8l-.8 4.2 1.6 1.6" />
+            <circle cx="15.3" cy="8.7" r="1.5" />
+          </svg>
+        </span>
+        <p class="topbar__text" id="topbarText" role="status" aria-live="polite"></p>
+        <span class="topbar__ticks" aria-hidden="true"><i></i><i></i><i></i></span>
+      </div>
+    </header>
+
+    <!-- ░░ the shape to match, kept on screen through the task ░░ -->
+    <aside class="target" id="target" aria-hidden="true">
+      <p class="target__label">SPACESHIP</p>
+      <div class="target__art">
+        <img src="assets/images/Triangle spaceship.png" alt="" />
+      </div>
+      <p class="target__name">TRIANGLE</p>
+    </aside>
+
+  </section>
+
+
+  <!-- ══════════════════════════ TRANSITION VEIL ══════════════════════════ -->
+  <div class="veil" id="veil" aria-hidden="true">
+    <span class="veil__scan"></span>
+  </div>
+
+
+  <!-- ══════════════════════════ SCREEN NAV ══════════════════════════ -->
+  <nav class="nav" id="nav" aria-label="Screen navigation">
+    <button class="nav__btn" id="navPrev" type="button" aria-label="Previous screen">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 8 12l7 7" /></svg>
+    </button>
+    <button class="nav__btn" id="navNext" type="button" aria-label="Next screen">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7" /></svg>
+    </button>
+  </nav>
+
+
+  <!-- ══════════════════════════ START GATE ══════════════════════════ -->
+  <div class="gate" id="gate">
+    <div class="gate__inner">
+      <p class="gate__eyebrow">GEO&nbsp;DRONE</p>
+      <h1 class="gate__title">Landing Mission</h1>
+      <button class="gate__btn" id="gateBtn" type="button">
+        <span>BEGIN MISSION</span>
+      </button>
+      <p class="gate__hint">Sound on — the commander is briefing you.</p>
+    </div>
+  </div>
+
+</div>
+
+<script src="js/lifecycle.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/waveform.js"></script>
+<script src="js/typewriter.js"></script>
+<script src="js/animation.js"></script>
+<script src="js/script.js"></script>
+</body>
+</html>

@@ -1,0 +1,106 @@
+/* ============================================================
+   Geo Drone — responsive tuning
+
+   The artwork is stretched to 100% x 100%, so the anchor
+   percentages hold at every aspect ratio. What needs nudging is
+   only the *typography* and the physical size of the button, so
+   the readout stays legible and the cap stays tappable.
+   ============================================================ */
+
+/* ---------------------------------------------------------- wide desktop */
+@media (min-width: 1600px) {
+  .stage { --btn-w: 11%; --btn-h: 9%; }
+}
+
+/* ---------------------------------------------------------- tablet */
+@media (max-width: 900px) {
+  .stage {
+    --btn-w: 14%;
+    --btn-h: 10.5%;
+  }
+
+  .launch__label { font-size: clamp(8px, 1.7vw, 16px); letter-spacing: .1em; }
+
+  .subtitle { width: min(74%, 620px); }
+}
+
+/* ---------------------------------------------------------- phone */
+@media (max-width: 620px) {
+  .stage {
+    --btn-w: 18%;
+    --btn-h: 11%;
+  }
+
+  .launch__label { font-size: clamp(7px, 2.1vw, 13px); letter-spacing: .06em; }
+
+  .hud__caption { left: 8%; right: 8%; bottom: 14%; font-size: clamp(12px, 3.4vw, 20px); }
+  .hud__tally   { bottom: 8%; font-size: clamp(8px, 2.5vw, 13px); letter-spacing: .16em; }
+
+  /* the bar is the instruction, so it gets the width it needs; the
+     roundel and the slashes are decoration and go first */
+  .topbar { width: 92%; top: 4%; }
+  .topbar__frame { gap: 8px; padding: 7px 12px; }
+  .topbar__text { font-size: clamp(9px, 2.75vw, 15px); letter-spacing: .02em; }
+  .topbar__ticks { display: none; }
+
+  .target { left: 3%; top: 15%; width: clamp(58px, 15%, 92px); }
+  .target__label { letter-spacing: .1em; }
+  .target__name  { letter-spacing: .1em; }
+
+  .gate__eyebrow { letter-spacing: .32em; }
+}
+
+/* ---------------------------------------------------------- short / landscape phone */
+@media (max-height: 460px) {
+  /* lift the plate so its shadow is not clipped by the stage edge */
+  .stage { --btn-h: 10.5%; --btn-cy: 89.5%; }
+  .hud__caption { bottom: 11%; font-size: clamp(10px, 2.6vh, 16px); }
+  .hud__tally   { bottom: 5%; font-size: clamp(8px, 1.8vh, 12px); }
+
+  /* almost no vertical room: the bar shrinks to a single tight line
+     and the ship chip drops under it rather than beside it */
+  .topbar { top: 3.4%; }
+  .topbar__frame { min-height: 30px; padding: 4px 10px; }
+  .topbar__text { font-size: clamp(9px, 3.1vh, 15px); }
+  .topbar__badge { width: clamp(22px, 5.4vh, 34px); }
+
+  .target { top: 26%; width: clamp(54px, 8%, 96px); }
+  .gate__title { margin-bottom: .8em; }
+  .gate__hint { margin-top: 1em; }
+}
+
+/* ---------------------------------------------------------- very wide (letterbox-ish) */
+@media (min-aspect-ratio: 21/9) {
+  .hud__caption { bottom: 14%; }
+  .hud__tally   { bottom: 8.5%; }
+  .topbar { width: min(66%, 1180px); }
+}
+
+/* ---------------------------------------------------------- tall / portrait
+   Portrait stretches the cockpit vertically. The button and the
+   readout follow the artwork, so only sizes need easing. */
+@media (max-aspect-ratio: 3/4) {
+  .stage {
+    --btn-w: 22%;
+    --btn-h: 8%;
+  }
+  .launch__label { font-size: clamp(8px, 2.6vw, 15px); }
+  .flyout__drone { width: 34%; }
+
+  /* portrait stretches the feed tall: the bar can afford to wrap to
+     two lines, and the ship chip has room to sit lower and larger */
+  .topbar { width: 92%; }
+  .topbar__text { font-size: clamp(10px, 3vw, 18px); }
+  .target { top: 22%; width: clamp(66px, 18%, 120px); }
+}
+
+/* ---------------------------------------------------------- pointer: coarse */
+@media (hover: none) {
+  .launch-slot.is-armed .launch:hover .launch__body { filter: none; }
+
+  /* a fat finger needs more than the image box on a small feed */
+  .zone__hit { inset: -10%; }
+
+  /* keep the nav a comfortable tap target on touch */
+  .nav__btn { width: clamp(38px, 9vw, 52px); }
+}

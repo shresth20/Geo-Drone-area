@@ -1,0 +1,1214 @@
+/* ============================================================
+   Geo Drone — Landing Mission
+   Layout, screens, cockpit chrome, dashboard, launch button,
+   drone feed, landing zones.
+
+   Every anchored element is positioned in PERCENT of the stage,
+   because both artwork layers are stretched to 100% x 100%.
+   The percentages below were measured off s1-cockpit-2.png
+   (1672 x 941) so the readout and the button land exactly on
+   the painted panels.
+   ============================================================ */
+
+/* ---------------------------------------------------------- typeface
+   Libre Baskerville, self-hosted. Both files are variable on a
+   single wght axis running 400-700 (checked in the fvar table), so
+   the range is declared and no weight above 700 is asked for
+   anywhere — past the axis the browser would fake the bold. */
+@font-face {
+  font-family: "Libre Baskerville";
+  src: url("../assets/fonts/libre_baskerville/librebaskerville-variablefont_wght.ttf")
+       format("truetype-variations");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Libre Baskerville";
+  src: url("../assets/fonts/libre_baskerville/librebaskerville-italic-variablefont_wght.ttf")
+       format("truetype-variations");
+  font-weight: 400 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+
+/* The HUD lettering is a different voice from the narration: the
+   briefing is set in Baskerville, but a mission bar reads as
+   machine-printed, so the frame chrome uses Poppins. */
+@font-face {
+  font-family: "Poppins";
+  src: url("../assets/fonts/poppins/poppins-extrabold.ttf") format("truetype");
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Poppins";
+  src: url("../assets/fonts/poppins/poppins-bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+
+/* ---------------------------------------------------------- reset */
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: #03050c;
+  overflow: hidden;
+}
+
+body {
+  font-family: "Libre Baskerville", Georgia, "Times New Roman", serif;
+  color: #dff2ff;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+}
+
+img { display: block; max-width: 100%; }
+button { font: inherit; color: inherit; }
+
+
+/* ---------------------------------------------------------- stage */
+.stage {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: #03050c;
+  isolation: isolate;
+
+  /* dashboard readout — the yellow box */
+  --dash-l: 33.6%;
+  --dash-t: 65.5%;
+  --dash-w: 34.0%;
+  --dash-h: 13.9%;
+
+  /* launch button — the green box */
+  --btn-cx: 50.7%;
+  --btn-cy: 91.1%;
+  --btn-w: 11.6%;
+  --btn-h: 8.6%;
+
+  /* canopy opening — where the drone flies out */
+  --win-cx: 50%;
+  --win-bottom: 62%;
+  --win-top: 11%;
+
+  --ink: #dff2ff;
+  --cyan: #4fd8ff;
+  --deep: #06101f;
+  --red: #ff3b30;
+}
+
+
+/* ---------------------------------------------------------- screens */
+.screen {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  visibility: hidden;
+  transform: scale(1.04);
+  filter: blur(10px) saturate(0.7);
+  transition:
+    opacity 1s cubic-bezier(.4, 0, .2, 1),
+    transform 1.25s cubic-bezier(.22, 1, .36, 1),
+    filter 1s cubic-bezier(.4, 0, .2, 1),
+    visibility 0s linear 1.25s;
+  will-change: opacity, transform, filter;
+}
+
+.screen.is-active {
+  opacity: 1;
+  visibility: visible;
+  transform: scale(1);
+  filter: blur(0) saturate(1);
+  transition-delay: 0s;
+}
+
+/* screen being pushed out — pull it forward instead of back */
+.screen.is-leaving {
+  transform: scale(1.12);
+  filter: blur(16px) saturate(0.5) brightness(1.15);
+}
+
+
+/* ---------------------------------------------------------- artwork layers */
+.layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100% 100%;   /* stretched to fill, as specified */
+  pointer-events: none;
+}
+
+.s1-bg      { background-image: url("../assets/images/s1-bg.png"); }
+.s1-cockpit { background-image: url("../assets/images/s1-cockpit-2.png"); }
+.s2-bg      { background-image: url("../assets/images/s2-bg (2).png"); }
+.drone-hud  { background-image: url("../assets/images/drone-screen.png"); }
+
+.layer--bg      { z-index: 1; }
+.layer--cockpit { z-index: 4; }
+.layer--hud     { z-index: 6; }
+
+
+/* ---------------------------------------------------------- starfield */
+.starfield {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.starfield i {
+  position: absolute;
+  border-radius: 50%;
+  background: #fff;
+  opacity: 0;
+  animation: twinkle var(--dur, 4s) ease-in-out var(--delay, 0s) infinite;
+}
+
+
+/* ---------------------------------------------------------- drone fly-out */
+.flyout {
+  position: absolute;
+  inset: 0;
+  z-index: 3;                 /* under the cockpit frame → clipped by the canopy */
+  pointer-events: none;
+}
+
+.flyout__drone {
+  position: absolute;
+  left: var(--win-cx);
+  top: var(--win-bottom);
+  width: 22%;
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.flyout__drone img {
+  width: 100%;
+  filter:
+    drop-shadow(0 0 26px rgba(96, 208, 255, .55))
+    drop-shadow(0 10px 30px rgba(0, 0, 0, .6));
+}
+
+/* rotor wash halo */
+.flyout__wash {
+  position: absolute;
+  left: 50%;
+  top: 36%;
+  width: 108%;
+  aspect-ratio: 3 / 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(110, 220, 255, .35), rgba(110, 220, 255, 0) 72%);
+  filter: blur(6px);
+}
+
+/* thruster streak left behind */
+.flyout__trail {
+  position: absolute;
+  left: var(--win-cx);
+  bottom: calc(100% - var(--win-bottom));
+  width: 1.1%;
+  height: 0;
+  transform: translate(-50%, 0);
+  border-radius: 999px;
+  background: linear-gradient(to top,
+    rgba(120, 225, 255, 0),
+    rgba(150, 235, 255, .75) 35%,
+    rgba(255, 255, 255, .95));
+  filter: blur(3px);
+  opacity: 0;
+}
+
+
+/* ============================================================
+   DASHBOARD READOUT  (yellow box)
+   ============================================================ */
+.dash {
+  position: absolute;
+  left: var(--dash-l);
+  top: var(--dash-t);
+  width: var(--dash-w);
+  height: var(--dash-h);
+  z-index: 5;
+  border-radius: clamp(4px, 0.9vw, 14px);
+  overflow: hidden;
+  background:
+    radial-gradient(120% 160% at 50% 0%, rgba(38, 96, 168, .55), rgba(6, 20, 42, .92) 70%),
+    #061428;
+  box-shadow:
+    inset 0 0 0 1px rgba(120, 205, 255, .28),
+    inset 0 0 34px rgba(30, 120, 220, .35),
+    0 0 26px rgba(40, 140, 255, .22);
+  opacity: 0;
+  transform: translateY(6%) scale(.985);
+  transition: opacity .7s ease, transform .7s cubic-bezier(.22, 1, .36, 1);
+}
+
+.dash.is-live {
+  opacity: 1;
+  transform: none;
+}
+
+.dash__wave {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* faint scanline grid over the glass */
+.dash__grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(to bottom, rgba(140, 215, 255, .07) 0 1px, transparent 1px 4px),
+    repeating-linear-gradient(to right, rgba(140, 215, 255, .05) 0 1px, transparent 1px 26px);
+  mix-blend-mode: screen;
+  opacity: .8;
+}
+
+/* travelling highlight, so the glass feels alive */
+.dash__sheen {
+  position: absolute;
+  inset: -30% -60%;
+  background: linear-gradient(105deg,
+    transparent 42%,
+    rgba(190, 235, 255, .12) 50%,
+    transparent 58%);
+  animation: dashSheen 7s linear infinite;
+}
+
+/* ============================================================
+   NARRATION SUBTITLE  (screen 1, read against the canopy)
+   ============================================================ */
+.subtitle {
+  position: absolute;
+  left: 50%;
+  bottom: 40%;
+  z-index: 8;
+  width: min(58%, 900px);
+  margin: 0;
+  transform: translateX(-50%);
+  text-align: center;
+  font-size: clamp(12px, 1.65vw, 27px);
+  font-weight: 600;
+  letter-spacing: .01em;
+  line-height: 1.35;
+  color: #f0fbff;
+  text-shadow:
+    0 2px 18px rgba(0, 0, 0, .9),
+    0 0 26px rgba(30, 150, 255, .5);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .5s ease, transform .5s cubic-bezier(.22, 1, .36, 1);
+}
+
+.subtitle.is-shown {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-8px);
+}
+
+
+/* ============================================================
+   LAUNCH BUTTON  (green box) — flat 2D
+   ============================================================ */
+.launch-slot {
+  position: absolute;
+  left: var(--btn-cx);
+  top: var(--btn-cy);
+  width: var(--btn-w);
+  height: var(--btn-h);
+  z-index: 7;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.launch {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.launch-slot.is-armed { pointer-events: auto; }
+.launch-slot.is-armed .launch { pointer-events: auto; }
+
+/* flat red plate: one fill, one outline, no bevel and no extrusion */
+.launch__body {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  border-radius: clamp(4px, 0.7vw, 12px);
+  background: #e8261a;
+  box-shadow:
+    /* hard shadow along the bottom edge */
+    0 clamp(5px, 1.15vh, 14px) 0 -1px rgba(46, 4, 1, .95),
+    /* deep soft cast falling away beneath it */
+    0 clamp(10px, 2.2vh, 26px) clamp(12px, 2.4vh, 28px) -7px rgba(0, 0, 0, .8),
+    /* outline + halo */
+    inset 0 0 0 2px rgba(255, 158, 148, .85),
+    0 0 24px rgba(255, 58, 40, .38);
+  transition:
+    background .14s ease,
+    box-shadow .14s ease,
+    transform .09s ease;
+}
+
+.launch__label {
+  position: relative;
+  z-index: 2;
+  font-size: clamp(9px, 1.32vw, 22px);
+  font-weight: 700;
+  letter-spacing: .16em;
+  color: #fff;
+  pointer-events: none;
+}
+
+/* pulsing alert outline — flat, just an expanding ring */
+.launch__ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 100%;
+  height: 100%;
+  transform: translate(-50%, -50%);
+  border-radius: clamp(4px, 0.7vw, 12px);
+  box-shadow: 0 0 0 0 rgba(255, 68, 48, .55);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.launch-slot.is-armed .launch__ring { animation: launchRing 1.8s ease-out infinite; }
+
+/* appear */
+.launch.is-shown { animation: launchPop .5s cubic-bezier(.2, 1.3, .4, 1) forwards; }
+
+/* hover / press — colour and a hair of scale, never a fake push */
+.launch-slot.is-armed .launch:hover .launch__body { background: #ff372a; }
+
+.launch-slot.is-armed .launch:active .launch__body,
+.launch.is-pressed .launch__body {
+  background: #b8140a;
+  transform: scale(.965);
+  box-shadow:
+    0 clamp(2px, 0.4vh, 5px) 0 -1px rgba(46, 4, 1, .95),
+    0 clamp(5px, 0.9vh, 11px) clamp(7px, 1.3vh, 16px) -5px rgba(0, 0, 0, .75),
+    inset 0 0 0 2px rgba(255, 190, 182, .95),
+    0 0 34px rgba(255, 70, 50, .55);
+}
+
+/* used up — let it fade out where it stands */
+.launch-slot.is-spent {
+  transition: opacity .7s ease .3s;
+  opacity: 0;
+}
+
+.launch:focus-visible { outline: none; }
+.launch:focus-visible .launch__body {
+  box-shadow:
+    0 clamp(5px, 1.15vh, 14px) 0 -1px rgba(46, 4, 1, .95),
+    0 clamp(10px, 2.2vh, 26px) clamp(12px, 2.4vh, 28px) -7px rgba(0, 0, 0, .8),
+    inset 0 0 0 2px rgba(255, 158, 148, .85),
+    0 0 0 3px rgba(120, 220, 255, .9),
+    0 0 24px rgba(255, 58, 40, .38);
+}
+
+
+/* ============================================================
+   SCREEN 2 — DRONE FEED
+   ============================================================ */
+.s2-bg {
+  opacity: 0;
+  transition: opacity 1.6s cubic-bezier(.4, 0, .2, 1);
+}
+.s2-bg.is-lit { opacity: 1; }
+
+/* the dark over the water */
+.blackout {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background:
+    radial-gradient(120% 120% at 50% 55%, #05080f 0%, #010205 62%, #000 100%);
+  opacity: 1;
+  transition: opacity 1.6s cubic-bezier(.4, 0, .2, 1);
+}
+.blackout.is-clear { opacity: 0; }
+
+
+/* ---------------------------------------------------------- scanner */
+.scanner {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .5s ease;
+}
+.scanner.is-on { opacity: 1; }
+
+/* faint red bloom over the whole feed while scanning */
+.scanner__wash {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 100% at 50% 50%, rgba(255, 40, 40, .10), rgba(255, 0, 0, 0) 70%);
+  opacity: 0;
+  transition: opacity .6s ease;
+}
+.scanner.is-on .scanner__wash { opacity: 1; }
+
+.scanner__bar {
+  position: absolute;
+  top: 3.5%;
+  bottom: 3.5%;
+  left: 0;
+  width: 0.55%;
+  min-width: 3px;
+  transform: translateX(0);
+  will-change: transform;
+}
+
+.scanner__core {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: linear-gradient(to bottom,
+    rgba(255, 90, 80, 0),
+    #ff5b4e 8%,
+    #fff0ee 50%,
+    #ff5b4e 92%,
+    rgba(255, 90, 80, 0));
+  box-shadow:
+    0 0 10px rgba(255, 60, 45, .95),
+    0 0 28px rgba(255, 40, 30, .8),
+    0 0 70px rgba(255, 20, 10, .55);
+}
+
+/* soft wide halo either side of the line */
+.scanner__glow {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2600%;
+  transform: translateX(-50%);
+  background: linear-gradient(to right,
+    rgba(255, 30, 20, 0) 46%,
+    rgba(255, 60, 40, .20) 50%,
+    rgba(255, 30, 20, 0) 54%);
+  filter: blur(6px);
+}
+
+
+/* ---------------------------------------------------------- landing zones */
+.zones {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.zone {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: var(--w);
+  transform: translate(-50%, -50%);
+}
+
+.zone__img {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  opacity: 0;
+  transform: translateY(46%) scale(.62);
+  filter:
+    drop-shadow(0 12px 22px rgba(0, 0, 0, .55))
+    drop-shadow(0 0 18px rgba(120, 200, 255, .25));
+  will-change: transform, opacity;
+}
+
+/* dark water displaced under the shape */
+.zone__wake {
+  position: absolute;
+  left: 50%;
+  bottom: 4%;
+  width: 132%;
+  aspect-ratio: 3.4 / 1;
+  transform: translate(-50%, 40%) scale(.4);
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(3, 22, 46, .8), rgba(3, 22, 46, 0) 74%);
+  opacity: 0;
+  z-index: 1;
+}
+
+/* expanding surface rings */
+.zone__ring {
+  position: absolute;
+  left: 50%;
+  bottom: 6%;
+  width: 120%;
+  aspect-ratio: 3.2 / 1;
+  transform: translate(-50%, 45%) scale(.25);
+  border-radius: 50%;
+  border: 2px solid rgba(190, 235, 255, .55);
+  box-shadow: 0 0 16px rgba(150, 225, 255, .35);
+  opacity: 0;
+  z-index: 3;
+}
+
+/* white foam burst at the moment of breaching */
+.zone__splash {
+  position: absolute;
+  left: 50%;
+  bottom: 2%;
+  width: 150%;
+  aspect-ratio: 3 / 1;
+  transform: translate(-50%, 40%) scale(.3);
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(235, 250, 255, .85), rgba(200, 240, 255, 0) 70%);
+  filter: blur(4px);
+  opacity: 0;
+  z-index: 3;
+}
+
+/* fire the whole emergence */
+/* opacity is DECLARED, not left to zoneRise's forwards fill: once a
+   zone is selectable, `zoneBeckon` (and the hover lift) replace the
+   rise on this element, and an animation that only touches transform
+   would drop the shape straight back to its hidden base state. */
+.zone.is-up .zone__img     { opacity: 1; animation: zoneRise 1.5s cubic-bezier(.18, .9, .28, 1) forwards; }
+.zone.is-up .zone__wake    { animation: zoneWake 1.6s ease-out forwards; }
+.zone.is-up .zone__splash  { animation: zoneSplash 1.1s ease-out forwards; }
+.zone.is-up .zone__ring    { animation: zoneRing 2.1s ease-out .12s forwards; }
+.zone.is-up .zone__ring--b { animation: zoneRing 2.4s ease-out .5s forwards; }
+
+/* ---------------------------------------------------------- picking a zone
+   The whole task lives on these five shapes, so the hit area is the
+   image box rather than the painted silhouette — generous on a
+   small screen, and the zones are far enough apart that no two
+   boxes overlap.
+
+   Only armed while the task is running (`.zones.is-picking`); the
+   rest of the time the feed is a picture, not a control.        */
+.zone__hit {
+  position: absolute;
+  inset: -6%;
+  z-index: 4;
+  padding: 0;
+  border: 0;
+  border-radius: 12%;
+  background: none;
+  -webkit-tap-highlight-color: transparent;
+  opacity: 0;
+  pointer-events: none;
+  cursor: pointer;
+  transition: opacity .3s ease;
+}
+
+.zones.is-picking .zone.is-up .zone__hit {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* a soft breathing halo, so it is obvious the shapes are tappable */
+.zones.is-picking .zone.is-up:not(.is-picked) .zone__img {
+  animation: zoneBeckon 2.6s ease-in-out infinite;
+}
+
+/* The lift has to come off the ZONE, not off the button: the image
+   is an earlier sibling of the hit target, so there is no selector
+   that reaches backwards from :hover on the button itself. */
+.zone__hit:focus-visible { outline: none; }
+
+.zones.is-picking .zone.is-up:not(.is-picked):has(.zone__hit:focus-visible) .zone__img {
+  animation: none;
+  transform: translateY(-2.5%) scale(1.05);
+  filter:
+    drop-shadow(0 14px 26px rgba(0, 0, 0, .6))
+    drop-shadow(0 0 0 3px rgba(120, 220, 255, .95))
+    drop-shadow(0 0 30px rgba(120, 220, 255, .7));
+}
+
+@media (hover: hover) {
+  .zones.is-picking .zone.is-up:not(.is-picked):hover .zone__img {
+    animation: none;
+    transform: translateY(-2.5%) scale(1.045);
+    filter:
+      drop-shadow(0 14px 26px rgba(0, 0, 0, .6))
+      drop-shadow(0 0 26px rgba(120, 220, 255, .55));
+  }
+}
+
+/* The tick that lands on a correct pick.
+
+   Placed at 60% down the box, not at the top: the artwork is a
+   square canvas with the shape inscribed, so a triangle's apex is
+   surrounded by transparent pixels and a badge up there would
+   float in open water. 60% is inside all five silhouettes. */
+.zone__pick {
+  position: absolute;
+  top: 60%;
+  left: 50%;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  width: 30%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #37f5c8, #10b48f);
+  box-shadow:
+    0 0 0 max(2px, .28vw) rgba(9, 30, 44, .85),
+    0 6px 18px rgba(0, 0, 0, .5),
+    0 0 26px rgba(55, 245, 200, .6);
+  transform: translate(-50%, -50%) scale(0);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.zone__pick svg {
+  width: 62%;
+  height: 62%;
+  fill: none;
+  stroke: #04241d;
+  stroke-width: 3.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* --- correct pick: locked in, glowing, tick stamped on --- */
+.zone.is-picked .zone__img {
+  animation: zonePicked .62s cubic-bezier(.22, 1.3, .36, 1) forwards !important;
+  filter:
+    drop-shadow(0 12px 22px rgba(0, 0, 0, .55))
+    drop-shadow(0 0 26px rgba(55, 245, 200, .75));
+}
+
+.zone.is-picked .zone__pick { animation: pickStamp .5s cubic-bezier(.2, 1.5, .4, 1) .1s forwards; }
+.zone.is-picked .zone__hit  { pointer-events: none; }
+
+/* --- wrong pick: a short, unmistakable no --- */
+.zone.is-wrong .zone__img {
+  animation: zoneWrong .52s cubic-bezier(.36, .07, .19, .97) !important;
+  filter:
+    drop-shadow(0 12px 22px rgba(0, 0, 0, .55))
+    drop-shadow(0 0 24px rgba(255, 78, 62, .8));
+}
+
+/* --- sinking back under, for the shapes that do not match --- */
+.zone.is-up.is-sunk .zone__img     { animation: zoneSink 1.35s cubic-bezier(.42, 0, .72, .58) forwards !important; }
+.zone.is-up.is-sunk .zone__wake    { animation: wakeClose 1.5s ease-out forwards; }
+.zone.is-up.is-sunk .zone__splash  { animation: splashClose 1.25s ease-out .42s forwards; }
+.zone.is-up.is-sunk .zone__ring    { animation: ringClose 1.9s ease-out .5s forwards; }
+.zone.is-up.is-sunk .zone__ring--b { animation: ringClose 2.1s ease-out .78s forwards; }
+.zone.is-up.is-sunk .zone__hit     { opacity: 0; pointer-events: none; }
+
+
+/* Hit boxes are squares around square artwork, so at extreme aspect
+   ratios two of them can just clip corners (zone a/b, zone c/d).
+   Where that happens the TRIANGLES win, because a sliver that turned
+   a correct tap into a buzzer is the one failure mode worth ruling
+   out; the shapes never overlap visually, so the paint order this
+   sets up is not otherwise observable. */
+.zone[data-shape="triangle"] { z-index: 3; }
+.zone                        { z-index: 2; }
+
+
+/* placement — kept clear of the painted rock clusters */
+.zone--a { --x: 30%;   --y: 63%; --w: 17.5%; }  /* triangle · large  */
+.zone--b { --x: 44%;   --y: 31%; --w: 11.5%; }  /* square            */
+.zone--c { --x: 57.5%; --y: 52%; --w: 13.5%; }  /* triangle · medium */
+.zone--d { --x: 70%;   --y: 26%; --w: 11%;   }  /* trapezium         */
+.zone--e { --x: 73%;   --y: 70%; --w: 10%;   }  /* triangle · small  */
+
+
+/* ---------------------------------------------------------- HUD chrome */
+.hud {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .8s ease;
+}
+.hud.is-on { opacity: 1; }
+
+.hud__caption {
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  bottom: 12%;
+  margin: 0;
+  text-align: center;
+  font-size: clamp(11px, 1.55vw, 26px);
+  font-weight: 600;
+  letter-spacing: .02em;
+  line-height: 1.3;
+  color: #eaf8ff;
+  text-shadow:
+    0 2px 14px rgba(0, 0, 0, .85),
+    0 0 22px rgba(30, 150, 255, .55);
+  opacity: 0;
+  transform: translateY(35%);
+  transition: opacity .45s ease, transform .45s ease;
+}
+.hud__caption.is-shown { opacity: 1; transform: none; }
+
+/* running count while the shapes are being picked, tucked under
+   the caption line so the two never collide */
+.hud__tally {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 6.5%;
+  margin: 0;
+  text-align: center;
+  font-family: "Poppins", "Segoe UI", system-ui, sans-serif;
+  font-weight: 700;
+  font-size: clamp(9px, 1.05vw, 16px);
+  letter-spacing: .22em;
+  color: rgba(150, 232, 255, .9);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, .8);
+  opacity: 0;
+  transform: translateY(40%);
+  transition: opacity .4s ease, transform .4s ease;
+}
+.hud__tally.is-shown { opacity: 1; transform: none; }
+
+
+/* ============================================================
+   NARRATION BAR  (top of the feed)
+
+   The lesson line lives in the HUD's own chrome rather than in a
+   caption floating over the water: it is the mission instruction,
+   and it has to stay readable while the player is looking down at
+   the shapes. Sits inside the painted bezel of drone-screen.png,
+   above the frame so the chamfers are not clipped by it.
+   ============================================================ */
+.topbar {
+  position: absolute;
+  left: 50%;
+  top: 4.6%;
+  z-index: 9;
+  width: min(84%, 1180px);
+  transform: translate(-50%, -190%);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity .6s cubic-bezier(.4, 0, .2, 1),
+    transform .85s cubic-bezier(.22, 1, .36, 1);
+}
+
+.topbar.is-on {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.topbar__frame {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: clamp(8px, 1.4vw, 22px);
+  min-height: clamp(38px, 6.2vh, 74px);
+  padding: clamp(6px, .9vh, 12px) clamp(14px, 1.9vw, 30px);
+  /* chamfered HUD plate: the notch depth is in px so it does not
+     turn into a spike on a narrow screen */
+  clip-path: polygon(
+    0 14px, 14px 0,
+    calc(100% - 14px) 0, 100% 14px,
+    100% calc(100% - 14px), calc(100% - 14px) 100%,
+    14px 100%, 0 calc(100% - 14px));
+  background:
+    linear-gradient(180deg, rgba(18, 62, 116, .92), rgba(6, 22, 48, .95) 55%, rgba(9, 34, 68, .92));
+  box-shadow:
+    inset 0 0 0 2px rgba(79, 216, 255, .55),
+    inset 0 0 26px rgba(47, 210, 255, .22),
+    0 10px 34px rgba(0, 0, 0, .55);
+}
+
+/* thin cyan rails along the top and bottom edges */
+.topbar__frame::before,
+.topbar__frame::after {
+  content: "";
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  height: 2px;
+  background: linear-gradient(to right,
+    rgba(79, 216, 255, 0),
+    rgba(150, 240, 255, .95) 25%,
+    rgba(150, 240, 255, .95) 75%,
+    rgba(79, 216, 255, 0));
+  opacity: .8;
+}
+.topbar__frame::before { top: 0; }
+.topbar__frame::after  { bottom: 0; }
+
+/* the rocket roundel on the left shoulder */
+.topbar__badge {
+  position: relative;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: clamp(28px, 4.4vh, 54px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(120% 120% at 30% 25%, #14406f, #06152e 70%);
+  box-shadow:
+    inset 0 0 0 2px rgba(79, 216, 255, .8),
+    0 0 18px rgba(47, 210, 255, .45);
+}
+
+.topbar__badge svg {
+  width: 60%;
+  height: 60%;
+  fill: none;
+  stroke: #8fe6ff;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.topbar__badge circle { fill: #06152e; }
+
+.topbar__text {
+  flex: 1 1 auto;
+  margin: 0;
+  min-width: 0;
+  text-align: center;
+  font-family: "Poppins", "Segoe UI", system-ui, sans-serif;
+  font-weight: 800;
+  font-size: clamp(10px, 1.42vw, 25px);
+  line-height: 1.22;
+  letter-spacing: .045em;
+  text-transform: uppercase;
+  color: #f2fbff;
+  text-shadow:
+    0 2px 10px rgba(0, 0, 0, .75),
+    0 0 20px rgba(70, 200, 255, .55);
+  /* pre-wrap keeps the space the caret was typed into from being
+     collapsed away, so the line does not twitch a pixel per word */
+  white-space: pre-wrap;
+}
+
+/* three speed slashes on the right shoulder, echoing the badge */
+.topbar__ticks {
+  flex: 0 0 auto;
+  display: flex;
+  gap: clamp(2px, .3vw, 5px);
+  transform: skewX(-22deg);
+}
+
+.topbar__ticks i {
+  display: block;
+  width: clamp(2px, .32vw, 5px);
+  height: clamp(10px, 1.8vh, 20px);
+  border-radius: 1px;
+  background: rgba(120, 232, 255, .85);
+  box-shadow: 0 0 10px rgba(79, 216, 255, .7);
+}
+.topbar__ticks i:nth-child(2) { opacity: .7; }
+.topbar__ticks i:nth-child(3) { opacity: .45; }
+
+
+/* ---------------------------------------------------------- typewriter
+   `.tw__off` holds the part of the line that has not been typed
+   yet. It stays in the layout — hidden, not removed — so the bar
+   is sized for the finished sentence from the very first frame and
+   the words do not creep outwards as they arrive. */
+.tw__off { visibility: hidden; }
+
+.tw__caret {
+  display: inline-block;
+  width: .09em;
+  height: .95em;
+  margin: 0 .02em -.11em;
+  background: #7fe6ff;
+  box-shadow: 0 0 10px rgba(79, 216, 255, .9);
+  opacity: 0;
+}
+
+.topbar__text.is-typing .tw__caret {
+  opacity: 1;
+  animation: caretBlink .62s steps(1, end) infinite;
+}
+
+
+/* ============================================================
+   TARGET SHAPE CHIP
+
+   “The spaceship is a triangle” is only useful if the triangle is
+   still on screen while the player hunts for matches, so the ship
+   stays parked in the corner for the whole task.
+   ============================================================ */
+.target {
+  position: absolute;
+  left: 4.5%;
+  top: 18%;
+  z-index: 8;
+  width: clamp(74px, 9.5%, 168px);
+  padding: clamp(6px, .8vh, 12px) clamp(6px, .7vw, 12px) clamp(4px, .6vh, 9px);
+  text-align: center;
+  clip-path: polygon(
+    0 11px, 11px 0,
+    calc(100% - 11px) 0, 100% 11px,
+    100% calc(100% - 11px), calc(100% - 11px) 100%,
+    11px 100%, 0 calc(100% - 11px));
+  background: linear-gradient(180deg, rgba(10, 40, 78, .88), rgba(4, 16, 34, .92));
+  box-shadow:
+    inset 0 0 0 2px rgba(79, 216, 255, .45),
+    0 8px 26px rgba(0, 0, 0, .5);
+  opacity: 0;
+  transform: translateX(-24%) scale(.9);
+  pointer-events: none;
+  transition:
+    opacity .55s ease,
+    transform .7s cubic-bezier(.22, 1, .36, 1);
+}
+
+.target.is-on {
+  opacity: 1;
+  transform: none;
+}
+
+.target__label,
+.target__name {
+  margin: 0;
+  font-family: "Poppins", "Segoe UI", system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: .18em;
+  line-height: 1.4;
+}
+
+.target__label {
+  font-size: clamp(6px, .62vw, 11px);
+  color: rgba(140, 225, 255, .8);
+}
+
+.target__name {
+  font-size: clamp(7px, .78vw, 13px);
+  color: #eaf8ff;
+  text-shadow: 0 0 14px rgba(70, 200, 255, .6);
+}
+
+.target__art {
+  margin: clamp(2px, .4vh, 6px) 0;
+}
+
+.target__art img {
+  width: 100%;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, .55));
+  animation: targetHover 3.4s ease-in-out infinite;
+}
+
+
+/* ============================================================
+   TRANSITION VEIL
+   ============================================================ */
+.veil {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .55s ease;
+  overflow: hidden;
+}
+.veil.is-on { opacity: 1; }
+
+.veil__scan {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -20%;
+  height: 40%;
+  background: linear-gradient(to bottom,
+    rgba(120, 220, 255, 0),
+    rgba(160, 235, 255, .18) 45%,
+    rgba(255, 255, 255, .32) 50%,
+    rgba(160, 235, 255, .18) 55%,
+    rgba(120, 220, 255, 0));
+  opacity: 0;
+}
+.veil.is-on .veil__scan { animation: veilScan 1.1s ease-in-out; }
+
+
+/* ============================================================
+   SCREEN NAV  (bottom-right)
+   ============================================================ */
+.nav {
+  position: absolute;
+  /* percentages alone left only ~9px of margin on a phone */
+  right: max(14px, 2.2%);
+  bottom: max(14px, 2.6%);
+  z-index: 30;             /* over both screens, under the veil */
+  display: flex;
+  gap: clamp(6px, .7vw, 12px);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .5s ease, visibility 0s linear .5s;
+}
+
+/* only offered once the mission has actually started */
+.nav.is-on {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+.nav__btn {
+  display: grid;
+  place-items: center;
+  /* 40px floor so it stays a usable target on a small screen */
+  width: clamp(40px, 2.9vw, 46px);
+  aspect-ratio: 1;
+  padding: 0;
+  border: 0;
+  border-radius: clamp(5px, .55vw, 9px);
+  color: rgba(200, 240, 255, .92);
+  background: rgba(6, 18, 36, .62);
+  box-shadow: inset 0 0 0 1px rgba(120, 205, 255, .32);
+  backdrop-filter: blur(4px);
+  cursor: pointer;
+  transition: background .16s ease, box-shadow .16s ease, color .16s ease, opacity .2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nav__btn svg {
+  width: 58%;
+  height: 58%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.nav__btn:hover:not(:disabled) {
+  background: rgba(16, 44, 78, .78);
+  box-shadow: inset 0 0 0 1px rgba(150, 225, 255, .6);
+  color: #eafaff;
+}
+
+.nav__btn:active:not(:disabled) { background: rgba(28, 66, 108, .85); }
+
+.nav__btn:disabled {
+  opacity: .3;
+  cursor: default;
+}
+
+.nav__btn:focus-visible {
+  outline: none;
+  box-shadow:
+    inset 0 0 0 1px rgba(150, 225, 255, .6),
+    0 0 0 3px rgba(120, 220, 255, .85);
+}
+
+
+/* ============================================================
+   START GATE
+   ============================================================ */
+.gate {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(90% 90% at 50% 45%, rgba(12, 26, 56, .72), rgba(2, 4, 10, .93) 70%),
+    rgba(2, 4, 10, .8);
+  backdrop-filter: blur(3px);
+  transition: opacity .7s ease, visibility 0s linear .7s;
+}
+.gate.is-gone { opacity: 0; visibility: hidden; pointer-events: none; }
+
+.gate__inner { text-align: center; padding: 6vmin; }
+
+.gate__eyebrow {
+  margin: 0 0 .5em;
+  font-size: clamp(11px, 1.5vw, 18px);
+  font-weight: 700;
+  letter-spacing: .48em;
+  color: rgba(140, 220, 255, .75);
+}
+
+.gate__title {
+  margin: 0 0 1.4em;
+  font-size: clamp(28px, 6.4vw, 76px);
+  font-weight: 700;
+  letter-spacing: .02em;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 0 44px rgba(60, 180, 255, .7);
+}
+
+.gate__btn {
+  position: relative;
+  padding: .85em 2.6em;
+  border: 0;
+  border-radius: 999px;
+  font-size: clamp(13px, 1.6vw, 21px);
+  font-weight: 700;
+  letter-spacing: .2em;
+  color: #04121f;
+  cursor: pointer;
+  background: linear-gradient(180deg, #b7f0ff, #43c8f5 55%, #1a8fd0);
+  box-shadow:
+    0 2px 0 #1279b3, 0 5px 0 #0d5f8f, 0 8px 0 #0a4a70,
+    0 16px 28px rgba(0, 0, 0, .55),
+    0 0 44px rgba(70, 200, 255, .5),
+    inset 0 2px 4px rgba(255, 255, 255, .7);
+  transition: transform .1s ease, box-shadow .1s ease;
+}
+
+.gate__btn:active {
+  transform: translateY(6px);
+  box-shadow:
+    0 1px 0 #0d5f8f, 0 2px 0 #0a4a70,
+    0 8px 14px rgba(0, 0, 0, .5),
+    0 0 44px rgba(70, 200, 255, .6),
+    inset 0 2px 4px rgba(255, 255, 255, .55);
+}
+
+.gate__hint {
+  margin: 1.8em 0 0;
+  font-size: clamp(10px, 1.15vw, 15px);
+  letter-spacing: .1em;
+  color: rgba(180, 215, 240, .6);
+}
+
+
+/* ---------------------------------------------------------- a11y */
+.is-reduced .dash__sheen,
+.is-reduced .starfield i,
+.is-reduced .launch__ring { animation: none !important; }
