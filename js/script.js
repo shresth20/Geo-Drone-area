@@ -286,11 +286,11 @@
       },
 
       /* --- the dark --- */
-      function () { return narrate('tooDark'); },
+      function () { return narrate(el.topbarText, 'tooDark'); },
       function () { return M.wait(220); },
 
       /* --- call for the scanner --- */
-      function () { return narrate('startScan'); },
+      function () { return narrate(el.topbarText, 'startScan'); },
 
       /* --- red line sweeps the feed --- */
       function () {
@@ -309,7 +309,7 @@
       function () { return M.wait(420); },
 
       /* --- payoff line --- */
-      function () { return narrate('foundZones'); },
+      function () { return narrate(el.topbarText, 'foundZones'); },
       function () { return M.wait(420); },
 
       /* ═══════════════ shape hunt ═══════════════ */

@@ -1090,7 +1090,12 @@ button { font: inherit; color: inherit; }
                   wobble to do its own maths. */
 .ship {
   position: absolute;
-  z-index: 5;
+  z-index: 4;
+  /* Which way it leans when it loses its footing. Set from JS to the
+     side it is going to fall off, so the rock and the topple are one
+     continuous movement instead of a swing back through vertical.
+     See padPlan().dir in js/animation.js. */
+  --lean: 1;
   width: calc(var(--ship-k) * var(--pu));
   aspect-ratio: 1;
   /* the ship's BASE CENTRE hovers over (50%, --ship-y) */
@@ -1197,10 +1202,22 @@ button { font: inherit; color: inherit; }
 
 
 /* ---------------------------------------------------------- landing pads */
+/* No z-index on .pads or .pad, deliberately. Either would become a
+   stacking context and trap its children, and the verdict outline
+   HAS to be able to rise above the craft — on a pad that is too
+   small the craft covers the land completely, and the whole point of
+   that beat is seeing how little land there was. So each piece takes
+   its place in the screen's own stacking order:
+
+     2  .pad__img     the land
+     3  .pad__area    the area printed on it
+     4  .ship         the craft, over the land
+     5  .pad__fit     the verdict, traced over the craft
+     5  .splash       water thrown up over the craft
+     6  .layer--hud   the frame (global)                          */
 .pads {
   position: absolute;
   inset: 0;
-  z-index: 4;
   pointer-events: none;
 }
 
@@ -1349,7 +1366,7 @@ button { font: inherit; color: inherit; }
 .pad__fit {
   position: absolute;
   inset: 0;
-  z-index: 3;
+  z-index: 5;
   overflow: visible;
   opacity: 0;
   pointer-events: none;
@@ -1375,7 +1392,7 @@ button { font: inherit; color: inherit; }
   position: absolute;
   left: 0;
   top: 0;
-  z-index: 4;
+  z-index: 5;
   width: calc(17 * var(--pu));
   aspect-ratio: 1;
   margin-left: calc(-8.5 * var(--pu));

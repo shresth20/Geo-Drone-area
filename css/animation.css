@@ -199,30 +199,35 @@
 
 /* TOO SMALL: the craft is wider than the land it is standing on, so
    it never gets a grip. High-frequency judder, growing, no travel —
-   it is trying to hold still and failing. */
+   it is trying to hold still and failing.
+
+   --lean (set from JS, +1 or -1) flips both of these towards the side
+   the craft is about to fall off, so the judder, the rock and the
+   topple all run one way instead of swinging back through vertical
+   before it goes over. */
 @keyframes shipTremble {
-  0%   { transform: translate(0, 0) rotate(0); }
-  12%  { transform: translate(-.7%, 0) rotate(-1deg); }
-  25%  { transform: translate(.9%, .3%) rotate(1.4deg); }
-  37%  { transform: translate(-1.2%, 0) rotate(-1.9deg); }
-  50%  { transform: translate(1.4%, .4%) rotate(2.3deg); }
-  62%  { transform: translate(-1.8%, 0) rotate(-2.9deg); }
-  75%  { transform: translate(2.1%, .6%) rotate(3.4deg); }
-  87%  { transform: translate(-2.5%, 0) rotate(-4deg); }
-  100% { transform: translate(2.2%, .8%) rotate(4.4deg); }
+  0%   { transform: translate(0, 0) rotate(0deg); }
+  12%  { transform: translate(calc(var(--lean) * -.7%), 0) rotate(calc(var(--lean) * -1deg)); }
+  25%  { transform: translate(calc(var(--lean) * .9%), .3%) rotate(calc(var(--lean) * 1.4deg)); }
+  37%  { transform: translate(calc(var(--lean) * -1.2%), 0) rotate(calc(var(--lean) * -1.9deg)); }
+  50%  { transform: translate(calc(var(--lean) * 1.4%), .4%) rotate(calc(var(--lean) * 2.3deg)); }
+  62%  { transform: translate(calc(var(--lean) * -1.8%), 0) rotate(calc(var(--lean) * -2.9deg)); }
+  75%  { transform: translate(calc(var(--lean) * 2.1%), .6%) rotate(calc(var(--lean) * 3.4deg)); }
+  87%  { transform: translate(calc(var(--lean) * -2.5%), 0) rotate(calc(var(--lean) * -4deg)); }
+  100% { transform: translate(calc(var(--lean) * 2.6%), .8%) rotate(calc(var(--lean) * 5deg)); }
 }
 
 /* TOO LARGE: it is standing on plenty of land but nothing is
    holding it in place, so it rocks heel to heel — slow, and each
    swing further over than the last. */
 @keyframes shipWobble {
-  0%   { transform: rotate(0); }
-  14%  { transform: rotate(-4deg); }
-  30%  { transform: rotate(5.5deg); }
-  46%  { transform: rotate(-8deg); }
-  62%  { transform: rotate(10deg); }
-  78%  { transform: rotate(-13deg); }
-  100% { transform: rotate(15deg); }
+  0%   { transform: rotate(0deg); }
+  14%  { transform: rotate(calc(var(--lean) * -4deg)); }
+  30%  { transform: rotate(calc(var(--lean) * 5.5deg)); }
+  46%  { transform: rotate(calc(var(--lean) * -8deg)); }
+  62%  { transform: rotate(calc(var(--lean) * 10deg)); }
+  78%  { transform: rotate(calc(var(--lean) * -13deg)); }
+  100% { transform: rotate(calc(var(--lean) * 16deg)); }
 }
 
 /* the moment it fits: a short settling squash, then still */
