@@ -46,66 +46,86 @@
 }
 
 
-/* ---------------------------------------------------------- landing zones */
+/* ---------------------------------------------------------- landing zones
+   The feed looks STRAIGHT DOWN, so a shape breaching the surface
+   comes towards the camera: it grows, and it comes into focus as it
+   leaves the murk. There is no vertical travel in any of these — an
+   island sliding up the screen would be an island moving north, not
+   an island surfacing.
+
+   The blur/brightness ramp is what sells the depth, and it has to
+   live in the keyframe rather than on a wrapper so it runs on the
+   same element and the same clock as the scale. Its 100% frame is a
+   copy of the resting filter on `.zone__img`: an animation with
+   `forwards` outranks the declaration it came from, so the last
+   frame has to BE that declaration or the shape would jump the
+   moment the rise lands. */
 @keyframes zoneRise {
   0% {
     opacity: 0;
-    transform: translateY(46%) scale(.62);
+    transform: scale(.34);
+    filter: blur(9px) brightness(.34) saturate(.5);
   }
   18% {
-    opacity: .55;
-    transform: translateY(30%) scale(.74);
+    opacity: .5;
+    transform: scale(.56);
+    filter: blur(6px) brightness(.5) saturate(.62);
   }
-  62% {
+  58% {
     opacity: 1;
-    transform: translateY(-5%) scale(1.05);
+    transform: scale(1.055);
+    filter: blur(1.4px) brightness(.94) saturate(.96);
   }
   80% {
-    transform: translateY(2%) scale(.99);
+    transform: scale(.985);
+    filter: none;
   }
   92% {
-    transform: translateY(-1%) scale(1.005);
+    transform: scale(1.008);
   }
   100% {
     opacity: 1;
     transform: none;
+    filter: drop-shadow(0 0 15px rgba(2, 26, 52, .72))
+             drop-shadow(0 0 26px rgba(120, 210, 255, .26));
   }
 }
 
 @keyframes zoneWake {
-  0%   { opacity: 0;   transform: translate(-50%, 40%) scale(.4); }
-  30%  { opacity: .95; transform: translate(-50%, 8%)  scale(1); }
-  100% { opacity: .55; transform: translate(-50%, 0)   scale(1.06); }
+  0%   { opacity: 0;   transform: translate(-50%, -50%) scale(.3); }
+  32%  { opacity: .95; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: .5;  transform: translate(-50%, -50%) scale(1.08); }
 }
 
 @keyframes zoneSplash {
-  0%   { opacity: 0;   transform: translate(-50%, 40%) scale(.3); }
-  22%  { opacity: 1;   transform: translate(-50%, 6%)  scale(1); }
-  100% { opacity: 0;   transform: translate(-50%, -4%) scale(1.5); }
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(.24); }
+  20%  { opacity: 1; transform: translate(-50%, -50%) scale(.95); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.55); }
 }
 
 @keyframes zoneRing {
-  0%   { opacity: 0;   transform: translate(-50%, 45%) scale(.25); }
-  15%  { opacity: .85; }
-  100% { opacity: 0;   transform: translate(-50%, 10%) scale(2.1); }
+  0%   { opacity: 0;   transform: translate(-50%, -50%) scale(.2); }
+  14%  { opacity: .85; }
+  100% { opacity: 0;   transform: translate(-50%, -50%) scale(1.95); }
 }
 
 
 /* ---------------------------------------------------------- shape hunt
    Picking a zone, and refusing one. */
 
-/* the idle invitation: shapes breathe while they are selectable */
+/* the idle invitation: shapes breathe towards the camera while they
+   are selectable — no lift, same reason as zoneRise */
 @keyframes zoneBeckon {
   0%, 100% { transform: none; }
-  50%      { transform: translateY(-1.2%) scale(1.018); }
+  50%      { transform: scale(1.028); }
 }
 
 /* accepted: a firm little press-in, then it settles a touch larger
    than it was, so a locked-in zone reads differently from the rest */
 @keyframes zonePicked {
   0%   { transform: none; }
-  34%  { transform: translateY(1.5%) scale(.955); }
-  70%  { transform: translateY(-1%) scale(1.055); }
+  34%  { transform: scale(.94); }
+  70%  { transform: scale(1.065); }
   100% { transform: scale(1.035); }
 }
 
@@ -134,42 +154,48 @@
   0% {
     opacity: 1;
     transform: none;
+    filter: drop-shadow(0 0 15px rgba(2, 26, 52, .72))
+             drop-shadow(0 0 26px rgba(120, 210, 255, .26));
   }
   16% {
     opacity: 1;
-    transform: translateY(-3%) scale(1.02);
+    transform: scale(1.03);
+    filter: none;
   }
   46% {
-    opacity: 1;
-    transform: translateY(14%) scale(.92);
+    opacity: .95;
+    transform: scale(.85);
+    filter: blur(2.6px) brightness(.74) saturate(.8);
   }
   78% {
     opacity: .5;
-    transform: translateY(34%) scale(.74);
+    transform: scale(.64);
+    filter: blur(6px) brightness(.5) saturate(.62);
   }
   100% {
     opacity: 0;
-    transform: translateY(50%) scale(.6);
+    transform: scale(.46);
+    filter: blur(10px) brightness(.34) saturate(.5);
   }
 }
 
 @keyframes wakeClose {
-  0%   { opacity: .55; transform: translate(-50%, 0)   scale(1.06); }
-  40%  { opacity: .95; transform: translate(-50%, 6%)  scale(1.14); }
-  100% { opacity: 0;   transform: translate(-50%, 22%) scale(.5); }
+  0%   { opacity: .5;  transform: translate(-50%, -50%) scale(1.08); }
+  40%  { opacity: .95; transform: translate(-50%, -50%) scale(1.16); }
+  100% { opacity: 0;   transform: translate(-50%, -50%) scale(.5); }
 }
 
 /* foam thrown up as the surface closes over the shape */
 @keyframes splashClose {
-  0%   { opacity: 0; transform: translate(-50%, 24%) scale(.4); }
-  26%  { opacity: 1; transform: translate(-50%, 8%)  scale(1.05); }
-  100% { opacity: 0; transform: translate(-50%, 0)   scale(1.6); }
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(.4); }
+  26%  { opacity: 1; transform: translate(-50%, -50%) scale(1.02); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.62); }
 }
 
 @keyframes ringClose {
-  0%   { opacity: 0;   transform: translate(-50%, 26%) scale(.3); }
+  0%   { opacity: 0;  transform: translate(-50%, -50%) scale(.3); }
   18%  { opacity: .8; }
-  100% { opacity: 0;   transform: translate(-50%, 8%)  scale(2); }
+  100% { opacity: 0;  transform: translate(-50%, -50%) scale(1.85); }
 }
 
 
@@ -177,11 +203,6 @@
 @keyframes caretBlink {
   0%, 49%   { opacity: 1; }
   50%, 100% { opacity: 0; }
-}
-
-@keyframes targetHover {
-  0%, 100% { transform: translateY(0)      rotate(0); }
-  50%      { transform: translateY(-5%) rotate(-1.4deg); }
 }
 
 
@@ -238,19 +259,23 @@
   100% { transform: translateY(0) scale(1); }
 }
 
-/* the pads breaching, gentler than the survey screen's — these are
-   being offered to the player, not discovered */
+/* The pads breaching, gentler than the survey screen's — these are
+   being offered to the player, not discovered. Same overhead camera,
+   so the same rule holds: they grow, they do not rise. The last
+   frame restates `.pad__img`'s resting shadow, for the reason set
+   out over zoneRise. */
 @keyframes padRise {
-  0%   { opacity: 0; transform: translateY(26%) scale(.8); }
-  60%  { opacity: 1; transform: translateY(-3%) scale(1.035); }
-  82%  { transform: translateY(1.2%) scale(.995); }
-  100% { opacity: 1; transform: none; }
+  0%   { opacity: 0; transform: scale(.72); filter: blur(6px) brightness(.5); }
+  60%  { opacity: 1; transform: scale(1.04); filter: none; }
+  82%  { transform: scale(.994); }
+  100% { opacity: 1; transform: none; filter: drop-shadow(0 0 20px rgba(2, 26, 52, .6)); }
 }
 
-/* the ring that says "you may put it here" */
+/* the ring that says "you may put it here" — a circle running out
+   into the water around the island, and settling back */
 @keyframes padBeckon {
-  0%, 100% { opacity: .25; transform: translate(-50%, -50%) scale(.9); }
-  50%      { opacity: .9;  transform: translate(-50%, -50%) scale(1.04); }
+  0%, 100% { opacity: .22; transform: translate(-50%, -50%) scale(.94); }
+  50%      { opacity: .85; transform: translate(-50%, -50%) scale(1.06); }
 }
 
 /* the verdict traced on the landing surface */
@@ -265,17 +290,43 @@
   40%      { opacity: 1; }
 }
 
-/* going in */
+/* Going in. Concentric with the point of impact — from overhead the
+   water opens outwards in every direction, so nothing here drifts up
+   the screen the way it did on the oblique sea. */
 @keyframes splashFoam {
   0%   { opacity: 0; transform: translate(-50%, -50%) scale(.2); }
-  18%  { opacity: 1; transform: translate(-50%, -58%) scale(1.05); }
+  18%  { opacity: 1; transform: translate(-50%, -50%) scale(1.02); }
   100% { opacity: 0; transform: translate(-50%, -50%) scale(1.7); }
 }
 
 @keyframes splashOut {
-  0%   { opacity: 0; transform: translate(-50%, -50%) scale(.22); }
+  0%   { opacity: 0;   transform: translate(-50%, -50%) scale(.22); }
   16%  { opacity: .85; }
-  100% { opacity: 0; transform: translate(-50%, -46%) scale(2.4); }
+  100% { opacity: 0;   transform: translate(-50%, -50%) scale(2.4); }
+}
+
+
+/* ---------------------------------------------------------- ground impact
+   Going over on the land instead of into the water. Faster and
+   harder than the splash: rock does not give, so the flash is one
+   beat and the dust hangs about after the rings have gone. */
+@keyframes crashFlash {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(.2); }
+  14%  { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); }
+}
+
+@keyframes crashDust {
+  0%   { opacity: 0;   transform: translate(-50%, -50%) scale(.22); }
+  12%  { opacity: .95; transform: translate(-50%, -50%) scale(.9); }
+  55%  { opacity: .6;  transform: translate(-50%, -50%) scale(1.35); }
+  100% { opacity: 0;   transform: translate(-50%, -50%) scale(1.75); }
+}
+
+@keyframes crashOut {
+  0%   { opacity: 0;  transform: translate(-50%, -50%) scale(.24); }
+  14%  { opacity: .9; }
+  100% { opacity: 0;  transform: translate(-50%, -50%) scale(2.2); }
 }
 
 
@@ -289,10 +340,14 @@
   /* the gate button must still arrive, just without the rise */
   .gate__btn.is-in { animation: none; opacity: 1; }
 
+  /* same for the NEXT button on the landing screen. The confetti is
+     not listed: M.confetti() builds no pieces at all under reduced
+     motion, so there is nothing here to switch off. */
+  .advance__btn.is-in { animation: none; opacity: 1; }
+
   /* the invitation and the idle drifts are decoration; the pick,
      refuse and sink animations carry meaning, so they stay */
   .zones.is-picking .zone.is-up:not(.is-picked) .zone__img,
-  .target__art img,
   .ship.is-in .ship__craft,
   .pads.is-choosing .pad.is-up .pad__ring,
   .topbar__text.is-typing .tw__caret { animation: none !important; }
@@ -317,4 +372,59 @@
   0%   { opacity: 0; transform: translateY(14px) scale(.92); }
   55%  { opacity: 1; }
   100% { opacity: 1; transform: none; }
+}
+
+/* ---------------------------------------------------------- celebration */
+
+/* One piece of paper falling the height of the frame. The sway
+   alternates side to side over four stops so it tumbles rather than
+   drops, and the spin is a signed angle handed in per piece, so
+   half the shower turns the other way. Every value the shower needs
+   to vary comes in as a custom property (see M.confetti), which is
+   what lets a hundred-odd pieces share this one keyframe. */
+@keyframes confettiFall {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, -14vh, 0) rotate(0deg);
+  }
+  5% { opacity: 1; }
+  25% {
+    transform: translate3d(var(--sway), 15vh, 0)
+               rotate(calc(var(--spin) * .25));
+  }
+  50% {
+    transform: translate3d(calc(var(--sway) * -1), 44vh, 0)
+               rotate(calc(var(--spin) * .5));
+  }
+  75% {
+    transform: translate3d(var(--sway), 74vh, 0)
+               rotate(calc(var(--spin) * .75));
+  }
+  88% { opacity: 1; }
+  100% {
+    opacity: 0;
+    transform: translate3d(calc(var(--sway) * -.4), 112vh, 0)
+               rotate(var(--spin));
+  }
+}
+
+/* the NEXT button arriving after a successful landing */
+@keyframes advanceRise {
+  0%   { opacity: 0; transform: translateY(12px) scale(.9); }
+  55%  { opacity: 1; }
+  100% { opacity: 1; transform: none; }
+}
+
+/* and then quietly asking to be pressed */
+@keyframes advanceBeckon {
+  0%, 100% { box-shadow:
+               0 2px 0 #1279b3, 0 4px 0 #0d5f8f,
+               0 10px 20px rgba(0, 0, 0, .5),
+               0 0 34px rgba(70, 200, 255, .45),
+               inset 0 2px 3px rgba(255, 255, 255, .7); }
+  50%      { box-shadow:
+               0 2px 0 #1279b3, 0 4px 0 #0d5f8f,
+               0 10px 20px rgba(0, 0, 0, .5),
+               0 0 52px rgba(120, 225, 255, .9),
+               inset 0 2px 3px rgba(255, 255, 255, .7); }
 }

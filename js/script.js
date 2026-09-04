@@ -11,7 +11,7 @@
    Screen 2 · drone feed
      black (ocean hidden) + "it is too dark"
      → "start the scanner"
-     → red line sweeps left/right/left/right
+     → green line sweeps left/right/left/right
      → ocean fades up 0 → 1
      → five landing zones breach the surface with splashes
      → "the scanner found several landing zones"
@@ -38,6 +38,9 @@
         required area"
      → the player picks; the craft flies down and the geometry
        decides what happens (see SCREEN 3 below)
+     → it fits: confetti falls over the whole frame, "landing
+       successful", and a NEXT button arrives under the footer lines
+       to carry the mission on to the screen after this one
 
    The "<" / ">" nav can cut in at any point, so each screen is
    described as a list of steps run under a generation id. Jumping
@@ -90,7 +93,13 @@
     tooSmall: 'This landing zone is too small. The spaceship cannot fit safely.',
     tooLarge: 'This landing zone is too large. Try to find the exact match.',
     perfectFit: 'Perfect match! The spaceship fits exactly.',
-    landed: 'Landing successful! Great work, Space Commander.'
+    landed: 'Landing successful! Great work, Space Commander.',
+
+    /* the two lines screens 4-8 add: the hand-off from the shape
+       task to the area task, and a second way of asking for the
+       area so five rounds do not all open with the same sentence */
+    onlyMatching: 'Now we only need to check these matching landing zones.',
+    findArea: 'Find the area of spaceship, and select the suitable land.'
   };
 
   function grab() {
@@ -99,8 +108,9 @@
       'flyDrone', 'flyTrail', 'dash', 'waveCanvas', 'cockpitCaption',
       'launchSlot', 'launchBtn', 'oceanBg', 'blackout', 'scanner',
       'zones',
-      'topbar', 'topbarText', 'target',
-      'screenLanding', 'ship', 'shipCraft', 'shipDims', 'pads', 'splash',
+      'topbar', 'topbarText',
+      'screenLanding', 'ship', 'shipCraft', 'shipDims', 'pads', 'splash', 'crash',
+      'confetti', 'advanceBtn',
       'landHud', 'landCaption', 'landTally', 'landTopbar', 'landTopbarText',
       'veil', 'gate', 'gateBtn', 'gateLoad', 'gateFill',
       'gateStatus', 'gatePct', 'nav', 'navPrev', 'navNext'
@@ -152,8 +162,25 @@
      the voice clip itself rather than off a chars/second guess —
      GeoAudio hands the <audio> element over through `onPlay`, and
      GeoType reads currentTime off it. See js/typewriter.js. */
-  function narrate(bar, key) {
-    var text = LINE[key] || '';
+  function narrate(bar, key, text) {
+    if (text == null) text = LINE[key] || '';
+
+    /* A line with no clip recorded for it yet. Screens 4-8 each name
+       their own shape ("the spaceship is a rhombus"), and there is no
+       audio for any of the five, so the typing is clocked off the
+       typewriter's own reading rate and the flow waits for the text
+       rather than for a voice. Drop the mp3s in and register them in
+       VOICE (js/audio.js) and this branch stops being taken — every
+       one of those lines starts speaking, with no change here. */
+    if (!A.hasVoice(key)) {
+      if (M.reduced()) {
+        T.set(bar, text);
+        return M.wait(1400);
+      }
+      return T.type(bar, text, { hold: 900 }).then(function () {
+        return M.wait(400);
+      });
+    }
 
     if (M.reduced()) {
       T.set(bar, text);
@@ -274,7 +301,6 @@
 
     el.topbar.classList.remove('is-on');
     T.clear(el.topbarText);
-    el.target.classList.remove('is-on');
   }
 
   function runDroneFeed() {
@@ -321,12 +347,8 @@
 
       function () { return narrate(el.topbarText, 'lookShapes'); },
 
-      /* the ship goes up BEFORE it is mentioned, so it is already
-         there to be looked at when the line names it */
-      function () {
-        el.target.classList.add('is-on');
-        return M.wait(560);
-      },
+      /* a beat to look at the water before the line names the shape */
+      function () { return M.wait(560); },
 
       function () { return narrate(el.topbarText, 'pickTriangles'); },
 
@@ -500,9 +522,11 @@
      flying the craft down and letting the geometry speak:
 
        12  the craft is wider than the land, hangs over both edges,
-           judders, loses its footing and goes into the water
-       30  the craft is standing on far more land than it needs with
-           nothing holding it, rocks heel to heel and topples off
+           judders, slides off it and goes into the water
+       30  the craft is on far more land than it needs with nothing
+           holding it, rocks until it overbalances, and goes over
+           ON the island — there is no edge within reach to fall
+           off, so it wrecks on the rock instead of sinking
        20  it comes down, squares up and plants itself
 
      The craft is drawn at its TRUE size on every attempt (see
@@ -531,7 +555,7 @@
 
     M.shipReset(el.ship, el.shipCraft);
     el.ship.classList.remove('is-in', 'is-committed', 'is-planted');
-    el.ship.classList.remove('is-teeter', 'is-rock');
+    el.ship.classList.remove('is-teeter', 'is-rock', 'is-wrecked');
     el.shipDims.classList.remove('is-drawn');
 
     el.pads.classList.remove('is-choosing');
@@ -542,6 +566,10 @@
     });
 
     el.splash.classList.remove('is-on');
+    el.crash.classList.remove('is-on');
+
+    M.confettiClear(el.confetti);
+    hideAdvance();
 
     el.landHud.classList.remove('is-on');
     el.landCaption.classList.remove('is-shown');
@@ -594,6 +622,7 @@
       function () {
         el.landTally.textContent = 'AREA = ½ × 8 × 5 = 20';
         el.landTally.classList.add('is-shown');
+        showAdvance();
       }
     ]);
   }
@@ -675,13 +704,49 @@
     el.ship.classList.add('is-committed');
 
     var plan = M.padPlan(el.ship, pad, ref);
-    el.ship.style.setProperty('--lean', plan.dir);
 
     M.shipDescend(el.ship, plan).then(function () {
       if (!live(id)) return;
       if (area === SHIP_AREA) return plant(pad, id);
       return fail(pad, plan, area < SHIP_AREA, id);
     });
+  }
+
+  /* ---------------------------------------------------------- the reward
+     The shower is fired and NOT awaited: it runs for a few seconds
+     on the compositor while the narration carries on underneath,
+     and clears itself up afterwards. The popper sound goes with it
+     rather than with the later line, so the bang lands on the frame
+     the first pieces appear. */
+  function celebrate() {
+    A.sfx('cheer', { volume: 0.5 });
+    M.confetti(el.confetti);
+  }
+
+  /* The NEXT button is the one control on this screen that is not
+     part of the question, so it is only ever shown once the craft is
+     planted — and it is taken away again by resetLanding(), which
+     every jump runs.
+
+     It is centred on the footer, where the formula and the tally
+     already are, so the HUD is lifted by the button's height at the
+     same moment: the footer becomes a three-line stack rather than
+     a button dropped on top of two lines of text. */
+  function showAdvance() {
+    if (!el.advanceBtn || !canAdvance()) return;
+    el.landHud.classList.add('is-lifted');
+    el.advanceBtn.hidden = false;
+    /* reflow, so there is an un-hidden starting frame to animate
+       away from instead of snapping straight to the end */
+    void el.advanceBtn.offsetWidth;
+    el.advanceBtn.classList.add('is-in');
+  }
+
+  function hideAdvance() {
+    if (!el.advanceBtn) return;
+    el.advanceBtn.classList.remove('is-in');
+    el.advanceBtn.hidden = true;
+    el.landHud.classList.remove('is-lifted');
   }
 
   /* ---------------------------------------------------------- it fits */
@@ -696,10 +761,12 @@
 
     A.sfx('correct', { volume: 0.6 });
 
+    /* a beat after the chime, so the two sounds read as one cue */
+    M.wait(220).then(function () { if (live(id)) celebrate(); });
+
     return narrate(el.landTopbarText, 'perfectFit')
       .then(function () {
         if (!live(id)) return;
-        A.sfx('cheer', { volume: 0.5 });
         return narrate(el.landTopbarText, 'landed');
       })
       .then(function () {
@@ -711,15 +778,33 @@
   }
 
   /* ---------------------------------------------------------- it does not
-     `tight` true  → the pad was too small, the craft overhangs it
-     `tight` false → the pad was too big, nothing holds the craft
+     `tight` true  → the island was too small, the craft overhangs it
+     `tight` false → the island was too big, nothing holds the craft
 
-     The verdict is SPOKEN over the struggle rather than after it: the
-     line starts as the craft begins to lose its footing and is still
-     going while it goes over, which is roughly how long the topple,
-     the splash and the sinking take. The chain waits for the line at
-     the end, so a slow connection delays the retry prompt instead of
-     talking over it. */
+     The two failures end in different places, because the geometry
+     ends them in different places:
+
+       TOO SMALL   the craft is wider than the land it came down on,
+                   so the edge is right under it. It judders, slides
+                   off, and the next thing under it is water.
+
+       TOO BIG     the land runs a long way past the craft on every
+                   side. Nothing is holding it, so it still goes
+                   over — but there is no edge within reach to go
+                   over, so it comes down on the rock and stays
+                   there as a wreck. It never reaches the sea.
+
+     Which way it falls follows from that: away from the middle of
+     the row when it is going into the water (`plan.dir`, so it
+     never drops across a neighbour), towards the middle of the
+     island when it is going onto the land (`plan.into`, so the
+     wreck ends up on the rock and not hanging off the shore).
+
+     The verdict is SPOKEN over the struggle rather than after it:
+     the line starts as the craft begins to lose its footing and is
+     still going while it goes over. The chain waits for the line at
+     the end, so a slow connection delays the retry prompt instead
+     of talking over it. */
   function fail(pad, plan, tight, id) {
     pad.classList.add(tight ? 'is-tight' : 'is-loose');
 
@@ -728,6 +813,9 @@
     el.landCaption.classList.add('is-shown');
 
     A.sfx('wrong', { volume: 0.45 });
+    /* the wobble and the fall have to lean the same way, or the
+       craft swings back through vertical between them */
+    el.ship.style.setProperty('--lean', tight ? plan.dir : plan.into);
     el.ship.classList.add(tight ? 'is-teeter' : 'is-rock');
 
     var said = narrate(el.landTopbarText, tight ? 'tooSmall' : 'tooLarge');
@@ -735,28 +823,23 @@
     return M.wait(tight ? 1150 : 1600)
       .then(function () {
         if (!live(id)) return null;
-        return M.shipTopple(el.ship, el.shipCraft, plan);
+        return tight
+          ? M.shipTopple(el.ship, el.shipCraft, plan)
+          : M.shipCrash(el.ship, el.shipCraft, plan);
       })
-      .then(function (impact) {
-        if (!live(id) || !impact) return;
-        /* the water is hit wherever it went over, not at a fixed
-           spot, so the splash is parked on the returned point */
-        el.splash.style.transform =
-          'translate(' + impact.x.toFixed(1) + 'px,' + impact.y.toFixed(1) + 'px)';
-        el.splash.classList.remove('is-on');
-        void el.splash.offsetWidth;          /* replay it on a retry */
-        el.splash.classList.add('is-on');
-        A.sfx('rock', { volume: 0.72, rate: 0.9 });
-        return M.shipSink(el.ship, plan);
+      .then(function (point) {
+        if (!live(id) || !point) return;
+        return tight ? intoTheWater(point, plan) : ontoTheRock(point);
       })
       .then(function () { return said; })
       .then(function () {
         if (!live(id)) return;
         /* put it back on the rail, callouts and all */
         pad.classList.remove('is-tight', 'is-loose');
-        el.ship.classList.remove('is-committed', 'is-teeter', 'is-rock');
+        el.ship.classList.remove('is-committed', 'is-teeter', 'is-rock', 'is-wrecked');
         M.shipReset(el.ship, el.shipCraft);
         el.splash.classList.remove('is-on');
+        el.crash.classList.remove('is-on');
         el.shipDims.classList.add('is-drawn');
         return M.wait(760);
       })
@@ -769,6 +852,547 @@
       });
   }
 
+  /* Both bursts are parked on the point the motion handed back —
+     the craft goes over wherever it went over, not at a fixed spot —
+     and both are restarted from zero so a retry replays them. */
+  function burstAt(node, point) {
+    node.style.transform =
+      'translate(' + point.x.toFixed(1) + 'px,' + point.y.toFixed(1) + 'px)';
+    node.classList.remove('is-on');
+    void node.offsetWidth;
+    node.classList.add('is-on');
+  }
+
+  /* too small: it went off the edge, so it keeps going down */
+  function intoTheWater(point, plan) {
+    burstAt(el.splash, point);
+    A.sfx('rock', { volume: 0.72, rate: 0.9 });
+    return M.shipSink(el.ship, plan);
+  }
+
+  /* too big: it went over on the island, and that is where it stays.
+     No sink to follow — the beat is the craft lying wrecked on all
+     that spare land, which is the point the 30-unit island was
+     making in the first place. */
+  function ontoTheRock(point) {
+    burstAt(el.crash, point);
+    el.ship.classList.add('is-wrecked');
+    A.sfx('rock', { volume: 0.8, rate: 0.78 });
+    return M.wait(620);
+  }
+
+  /* ============================================================
+     SCREENS 4 TO 8 — A ROUND PER SHAPE
+
+     One driver for all five. Screens 2 and 3 teach the two halves of
+     the mission separately — the survey feed asks which zones are
+     the same SHAPE as the craft, the landing asks which one is the
+     same AREA — and from here on each screen asks both, about a new
+     shape and a new area formula:
+
+       identify the shape      the craft comes up WITHOUT its
+                               callouts, and the line names its shape
+       filter the zones        five islands, three of that shape and
+                               two that are not; wrong shape shakes,
+                               right shape takes a tick, and the two
+                               that never matched sink back under
+       calculate the area      the callouts are drawn on, and the
+                               formula goes up in the HUD
+       compare the areas       the three survivors have their areas
+                               printed on them
+       select the exact match  the craft flies down and the geometry
+                               decides, exactly as on screen 3
+       land                    planted, confetti, NEXT
+
+     What differs between the five screens is entirely data — the
+     artwork, the measurements, the numbers on the islands, the
+     formula — and all of it lives in js/pages.js. Nothing below
+     names a shape.
+
+     Round state hangs off the round object rather than off this
+     module, because resetRound() has to be able to put a screen the
+     player has already left back to its opening state while another
+     one is playing.
+     ============================================================ */
+
+  var R = null;                 /* the round on screen, while it plays */
+
+  function roundPads(round) { return round.el.padList; }
+
+  function roundMatches(round) {
+    return roundPads(round).filter(function (pad) {
+      return pad.dataset.shape === round.shape;
+    });
+  }
+
+  /* the island the craft actually fits: the scale every attempt is
+     drawn at, whichever one is being flown to */
+  function roundRef(round) {
+    return round.el.pads.querySelector('.pad[data-area="' + round.area + '"]');
+  }
+
+  function resetRound(round) {
+    if (R === round) R = null;
+
+    var e = round.el;
+
+    round.phase = null;         /* 'shape', 'area', or nothing to do */
+    round.picked = 0;
+    round.scolding = false;
+    round.landing = false;
+    round.solved = false;
+
+    M.shipReset(e.ship, e.shipCraft);
+    e.ship.classList.remove('is-in', 'is-committed', 'is-planted',
+                            'is-teeter', 'is-rock', 'is-wrecked');
+    e.ship.style.removeProperty('--lean');
+    e.shipDims.classList.remove('is-drawn');
+
+    e.pads.classList.remove('is-picking', 'is-choosing', 'is-priced');
+    roundPads(round).forEach(function (pad) {
+      pad.classList.remove('is-up', 'is-picked', 'is-wrong', 'is-sunk',
+                           'is-priced', 'is-fit', 'is-loose', 'is-tight');
+      var hit = pad.querySelector('.pad__hit');
+      if (hit) hit.tabIndex = -1;
+    });
+
+    e.splash.classList.remove('is-on');
+    e.crash.classList.remove('is-on');
+    M.confettiClear(e.confetti);
+
+    e.advance.classList.remove('is-in');
+    e.advance.hidden = true;
+
+    e.hud.classList.remove('is-on', 'is-lifted');
+    e.caption.classList.remove('is-shown');
+    e.caption.textContent = '';
+    e.tally.classList.remove('is-shown');
+    e.tally.textContent = '';
+
+    e.topbar.classList.remove('is-on');
+    T.clear(e.topbarText);
+
+    /* both player-driven steps park a promise only a click can
+       settle, so every jump settles it by hand — the step after it
+       then sees a stale generation and unwinds like any other */
+    var done = round.release;
+    round.release = null;
+    if (done) done();
+  }
+
+  function runRound(round) {
+    W.stop();
+    R = round;
+
+    var e = round.el;
+
+    return sequence([
+      function () {
+        e.hud.classList.add('is-on');
+        A.duckAmbience(0.16, 900);
+        return M.wait(520);
+      },
+
+      function () {
+        e.topbar.classList.add('is-on');
+        return M.wait(680);
+      },
+
+      /* ── identify the shape ──
+         The craft arrives with NO callouts. This half of the round is
+         about its outline; measurements on screen would be answering
+         the next question before this one has been asked. */
+      function () {
+        e.ship.classList.add('is-in');
+        return M.wait(880);
+      },
+
+      function () { return narrate(e.topbarText, 'lookShapes'); },
+
+      /* ── the landing zones surface ── */
+      function () { return offerRound(round); },
+      function () { return M.wait(300); },
+
+      /* the one line on these screens with no clip behind it: it
+         names the shape, and it says something different on each of
+         the five (see narrate()) */
+      function () { return narrate(e.topbarText, round.shape, round.say); },
+
+      /* ── filter: over to the player, until all three are found ── */
+      function (id) { return startRoundPicking(round, id); },
+
+      function () { return M.wait(400); },
+      function () { return narrate(e.topbarText, 'shapeMatch'); },
+
+      /* ── the two that never matched go back under ── */
+      function () { return sinkRoundDecoys(round); },
+      function () { return M.wait(280); },
+      function () { return narrate(e.topbarText, 'onlyMatching'); },
+
+      /* ── calculate the area the craft needs ──
+         the callouts are drawn on as the line lands: they ARE "how
+         much space it needs", the same beat screen 3 makes */
+      function () {
+        M.wait(680).then(function () {
+          if (R === round) e.shipDims.classList.add('is-drawn');
+        });
+        return narrate(e.topbarText, 'spaceNeeded');
+      },
+
+      /* ── compare the areas on offer ── */
+      function () { return priceRound(round); },
+      function () { return narrate(e.topbarText, round.areaKey); },
+      function () { return narrate(e.topbarText, 'chooseExact'); },
+
+      /* ── select the exact match, for as many goes as it takes ── */
+      function (id) { return startRoundChoosing(round, id); },
+
+      /* ── planted; plantRound() has already said its piece ── */
+      function () {
+        e.tally.textContent = round.copy.sum;
+        e.tally.classList.add('is-shown');
+        showRoundAdvance(round);
+      }
+    ]);
+  }
+
+  /* Five islands breaching, near and far alternating (the order is
+     set in js/pages.js) so the archipelago arrives scattered rather
+     than as two batches of one rank each. */
+  function offerRound(round) {
+    var list = round.el.reveal;
+    var gap = M.reduced() ? 130 : 380;
+
+    list.forEach(function (pad, i) {
+      M.wait(i * gap).then(function () {
+        pad.classList.add('is-up');
+        /* a little pitch variation, so five splashes do not sound
+           like the same sample five times */
+        A.sfx('rock', { volume: 0.5, rate: [1, 0.92, 1.08, 0.96, 1.12][i % 5] });
+      });
+    });
+
+    return M.wait((list.length - 1) * gap + (M.reduced() ? 400 : 1300));
+  }
+
+
+  /* ---------------------------------------------------------- the shape task */
+
+  function startRoundPicking(round, id) {
+    round.phase = 'shape';
+    round.picked = 0;
+
+    round.el.pads.classList.add('is-picking');
+    roundPads(round).forEach(function (pad) {
+      var hit = pad.querySelector('.pad__hit');
+      if (hit) hit.tabIndex = 0;
+    });
+
+    return new Promise(function (resolve) {
+      round.release = resolve;
+      if (!live(id)) resetRound(round);      /* jumped while we armed */
+    });
+  }
+
+  function endRoundPicking(round) {
+    round.phase = null;
+    round.scolding = false;
+
+    round.el.pads.classList.remove('is-picking');
+    roundPads(round).forEach(function (pad) {
+      var hit = pad.querySelector('.pad__hit');
+      if (hit) hit.tabIndex = -1;
+    });
+
+    var done = round.release;
+    round.release = null;
+    if (done) done();
+  }
+
+  function onRoundShapePick(round, pad) {
+    if (pad.classList.contains('is-picked')) return;
+
+    /* --- the wrong shape --- */
+    if (pad.dataset.shape !== round.shape) {
+      A.sfx('wrong', { volume: 0.5 });
+
+      pad.classList.remove('is-wrong');
+      /* force a reflow so a second wrong tap on the same island
+         replays the shake instead of doing nothing */
+      void pad.offsetWidth;
+      pad.classList.add('is-wrong');
+      M.wait(620).then(function () { pad.classList.remove('is-wrong'); });
+
+      /* one nudge at a time — tapping both decoys must not stack two
+         voice lines on top of each other */
+      if (!round.scolding) {
+        round.scolding = true;
+        A.say('tryAgain').then(function () { round.scolding = false; });
+      }
+      return;
+    }
+
+    /* --- a match --- */
+    pad.classList.add('is-picked');
+    round.picked++;
+    A.sfx('correct', { volume: 0.55 });
+
+    if (round.picked >= roundMatches(round).length) {
+      /* let the last tick land before the flow moves on */
+      M.wait(760).then(function () {
+        if (R === round) endRoundPicking(round);
+      });
+    }
+  }
+
+  /* The shapes that are not the craft's go back where they came
+     from, nearest (largest) first so the surface closes front to
+     back — the survey feed's own manners. */
+  function sinkRoundDecoys(round) {
+    var others = roundPads(round).filter(function (pad) {
+      return pad.dataset.shape !== round.shape;
+    });
+
+    others.sort(function (a, b) {
+      return b.getBoundingClientRect().width - a.getBoundingClientRect().width;
+    });
+
+    return M.sinkZones(others, function (pad, i) {
+      A.sfx('rock', { volume: 0.6, rate: [0.88, 0.95][i % 2] });
+    }, { gap: 620 });
+  }
+
+
+  /* ---------------------------------------------------------- the area task
+
+     The second question opens: the ticks fade off the three islands
+     that matched (three green ticks over three different areas would
+     read as three right answers) and their areas are printed on them
+     instead. */
+  function priceRound(round) {
+    var matches = roundMatches(round);
+    round.el.pads.classList.add('is-priced');
+
+    matches.forEach(function (pad, i) {
+      M.wait(i * 260).then(function () {
+        if (R !== round) return;
+        pad.classList.add('is-priced');
+        A.sfx('click', { volume: 0.3, rate: [1.06, 1, 1.12][i % 3] });
+
+        /* the label carried the shape while the shape was the
+           question; now it carries the number too */
+        var hit = pad.querySelector('.pad__hit');
+        if (hit) {
+          hit.setAttribute('aria-label',
+            pad.dataset.name + ' landing zone of ' +
+            pad.dataset.area + ' square units');
+        }
+      });
+    });
+
+    return M.wait((matches.length - 1) * 260 + 950);
+  }
+
+  function startRoundChoosing(round, id) {
+    round.phase = 'area';
+    armRound(round);
+    standingRoundHint(round);
+
+    return new Promise(function (resolve) {
+      round.release = resolve;
+      if (!live(id)) resetRound(round);
+    });
+  }
+
+  function armRound(round) {
+    round.el.pads.classList.add('is-choosing');
+    /* only the three that survived the filter: the other two are
+       under the water */
+    roundMatches(round).forEach(function (pad) {
+      var hit = pad.querySelector('.pad__hit');
+      if (hit) hit.tabIndex = 0;
+    });
+  }
+
+  function disarmRound(round) {
+    round.el.pads.classList.remove('is-choosing');
+    roundPads(round).forEach(function (pad) {
+      var hit = pad.querySelector('.pad__hit');
+      if (hit) hit.tabIndex = -1;
+    });
+  }
+
+  /* As on screen 3, the HUD lines are deliberately NOT a repeat of
+     the spoken line above: they carry the arithmetic the player is
+     being asked to do, and stay put while the narration comes and
+     goes. */
+  function standingRoundHint(round) {
+    var e = round.el;
+    e.caption.textContent = round.copy.formula;
+    e.caption.classList.add('is-shown');
+    e.tally.textContent = round.copy.tally;
+    e.tally.classList.add('is-shown');
+  }
+
+  function onRoundAreaPick(round, pad) {
+    if (round.landing || pad.dataset.area == null) return;
+
+    var ref = roundRef(round);
+    if (!ref) return;
+
+    var area = +pad.dataset.area;
+    var e = round.el;
+
+    /* An attempt runs on its own chain, outside the screen's
+       sequence, so it carries the generation itself — otherwise a
+       jump mid-crash would come back and re-arm a screen the player
+       has already left. */
+    var id = runId;
+
+    round.landing = true;
+    disarmRound(round);
+    A.sfx('click', { volume: 0.4 });
+
+    /* the callouts and the idle bob come off: the craft is flying
+       now, and a measurement drawing riding through a crash would
+       read as part of the wreck */
+    e.ship.classList.add('is-committed');
+
+    var plan = M.padPlan(e.ship, pad, ref, round.geo);
+
+    return M.shipDescend(e.ship, plan).then(function () {
+      if (!live(id)) return;
+      return area === round.area
+        ? plantRound(round, pad, id)
+        : failRound(round, pad, plan, area < round.area, id);
+    });
+  }
+
+  /* ---------------------------------------------------------- it fits */
+  function plantRound(round, pad, id) {
+    var e = round.el;
+
+    round.solved = true;
+    e.ship.classList.add('is-planted');
+    pad.classList.add('is-fit');
+
+    e.caption.textContent = 'PERFECT FIT · ' + round.area + ' SQ UNITS';
+    e.caption.classList.add('is-shown');
+    e.tally.textContent = round.copy.sum;
+
+    A.sfx('correct', { volume: 0.6 });
+
+    /* a beat after the chime, so the two sounds read as one cue. The
+       shower is fired and not awaited: it runs on the compositor
+       while the narration carries on underneath. */
+    M.wait(220).then(function () {
+      if (!live(id)) return;
+      A.sfx('cheer', { volume: 0.5 });
+      M.confetti(e.confetti);
+    });
+
+    return narrate(e.topbarText, 'perfectFit')
+      .then(function () {
+        if (!live(id)) return;
+        return narrate(e.topbarText, 'landed');
+      })
+      .then(function () {
+        round.landing = false;
+        var done = round.release;
+        round.release = null;
+        if (done) done();
+      });
+  }
+
+  /* ---------------------------------------------------------- it does not
+     Same two failures as screen 3, and for the same reasons — the
+     craft is drawn at its TRUE size on every attempt, so both are
+     the honest consequence of the numbers:
+
+       too small  the craft is wider than the land it came down on,
+                  so the edge is right under it: it judders, slides
+                  off, and the next thing under it is water
+       too big    the land runs a long way past the craft on every
+                  side, nothing is holding it, and there is no edge
+                  within reach to go over — so it wrecks ON the rock
+                  and never reaches the sea                         */
+  function failRound(round, pad, plan, tight, id) {
+    var e = round.el;
+
+    pad.classList.add(tight ? 'is-tight' : 'is-loose');
+
+    e.caption.textContent =
+      pad.dataset.area + ' SQ UNITS — THE CRAFT NEEDS ' + round.area;
+    e.caption.classList.add('is-shown');
+
+    A.sfx('wrong', { volume: 0.45 });
+    /* the wobble and the fall have to lean the same way, or the craft
+       swings back through vertical between them */
+    e.ship.style.setProperty('--lean', tight ? plan.dir : plan.into);
+    e.ship.classList.add(tight ? 'is-teeter' : 'is-rock');
+
+    /* the verdict is SPOKEN OVER the struggle rather than after it,
+       and awaited at the end, so a slow connection delays the retry
+       prompt instead of talking over it */
+    var said = narrate(e.topbarText, tight ? 'tooSmall' : 'tooLarge');
+
+    return M.wait(tight ? 1150 : 1600)
+      .then(function () {
+        if (!live(id)) return null;
+        return tight
+          ? M.shipTopple(e.ship, e.shipCraft, plan)
+          : M.shipCrash(e.ship, e.shipCraft, plan);
+      })
+      .then(function (point) {
+        if (!live(id) || !point) return;
+
+        if (tight) {
+          burstAt(e.splash, point);
+          A.sfx('rock', { volume: 0.72, rate: 0.9 });
+          return M.shipSink(e.ship, plan);
+        }
+
+        burstAt(e.crash, point);
+        e.ship.classList.add('is-wrecked');
+        A.sfx('rock', { volume: 0.8, rate: 0.78 });
+        return M.wait(620);
+      })
+      .then(function () { return said; })
+      .then(function () {
+        if (!live(id)) return;
+        /* put it back on the rail, callouts and all */
+        pad.classList.remove('is-tight', 'is-loose');
+        e.ship.classList.remove('is-committed', 'is-teeter', 'is-rock', 'is-wrecked');
+        M.shipReset(e.ship, e.shipCraft);
+        e.splash.classList.remove('is-on');
+        e.crash.classList.remove('is-on');
+        e.shipDims.classList.add('is-drawn');
+        return M.wait(760);
+      })
+      .then(function () {
+        if (!live(id)) return;
+        round.landing = false;
+        if (!round.solved) armRound(round);
+        standingRoundHint(round);
+        return narrate(e.topbarText, 'chooseExact');
+      });
+  }
+
+  /* The reward for the right answer, and the way on. Withheld when
+     canAdvance() says there is nowhere for it to go. */
+  function showRoundAdvance(round) {
+    var btn = round.el.advance;
+    if (!btn || !canAdvance()) return;
+
+    round.el.hud.classList.add('is-lifted');
+    btn.hidden = false;
+    /* reflow, so there is an un-hidden starting frame to animate away
+       from instead of snapping straight to the end */
+    void btn.offsetWidth;
+    btn.classList.add('is-in');
+  }
+
+
   /* ============================================================
      SCREENS + NAV
      ============================================================ */
@@ -778,9 +1402,78 @@
     { node: function () { return el.screenLanding; }, reset: resetLanding,   run: runLanding }
   ];
 
+  /* Screens 4 to 8 are built from js/pages.js at boot and appended
+     here, so the nav, the veil, the NEXT button and goTo() pick them
+     up with no special case: as far as everything below is
+     concerned they are three more entries in this list.
+
+     Built rather than written out in index.html because the five are
+     one screen five times over — the same markup with a different
+     shape's artwork and measurements in it. Five copies in the
+     document would be five copies to keep in step, and none of them
+     could own an id. */
+  function addRoundScreens() {
+    /* Loudly, because the mission still runs without it: screens 1-3
+       play as normal and then simply stop, which looks like a broken
+       NEXT button rather than a missing file. */
+    if (!global.GeoPages) {
+      if (global.console) {
+        console.warn('GeoDrone: js/pages.js did not load — screens 4 to 8 ' +
+                     'are missing and the mission ends on the landing.');
+      }
+      return;
+    }
+
+    global.GeoPages.build(el.stage, el.veil).forEach(function (round) {
+      resetRound(round);                   /* opening state from the off */
+
+      SCREENS.push({
+        node:  function () { return round.node; },
+        reset: function () { resetRound(round); },
+        run:   function () { return runRound(round); }
+      });
+
+      /* one listener on the container rather than five on the
+         islands, and the phase decides which question the tap is an
+         answer to */
+      round.el.pads.addEventListener('click', function (e) {
+        var hit = e.target.closest('.pad__hit');
+        if (!hit || R !== round) return;
+
+        var pad = hit.closest('.pad');
+        if (!pad) return;
+
+        if (round.phase === 'shape') onRoundShapePick(round, pad);
+        else if (round.phase === 'area') onRoundAreaPick(round, pad);
+      });
+
+      round.el.advance.addEventListener('click', onAdvance);
+    });
+  }
+
   function syncNav() {
     el.navPrev.disabled = busy || current === 0;
     el.navNext.disabled = busy || current === SCREENS.length - 1;
+  }
+
+  /* Is there a screen after this one? Asked by every NEXT button
+     before it shows itself, and it is the SAME question the ">"
+     arrow answers by going disabled — a screen must never offer a
+     button the nav has already given up on.
+
+     This matters most when js/pages.js has not arrived: screens 4-8
+     are built from it at boot, so without it the landing IS the
+     last screen, and a NEXT there would appear and then refuse to
+     go anywhere. That is a stale cache or a bad deploy rather than
+     a state the flow can fix, so the button simply stays away. */
+  function canAdvance() {
+    return current < SCREENS.length - 1;
+  }
+
+  /* Every NEXT button, on every screen, goes through here. */
+  function onAdvance() {
+    A.sfx('click', { volume: 0.4 });
+    return goTo(current + 1);
   }
 
   /* Jump to a screen: abandon whatever was running, put the target
@@ -993,6 +1686,11 @@
     M.starfield(el.starfield, 150);
     W.init(el.waveCanvas);
 
+    /* before runGate(), so the islands and craft on screens 4-8 are
+       already in document.images when the loading bar works out how
+       many assets there are to wait for */
+    addRoundScreens();
+
     runGate();
 
     el.gateBtn.addEventListener('click', begin, { once: true });
@@ -1016,6 +1714,11 @@
 
     el.navPrev.addEventListener('click', function () { goTo(current - 1); });
     el.navNext.addEventListener('click', function () { goTo(current + 1); });
+
+    /* The reward button takes the same road as the ">" arrow, which
+       is what makes it carry straight on into screen 4. Screens 4-8
+       wire the same handler, in addRoundScreens(). */
+    el.advanceBtn.addEventListener('click', onAdvance);
     syncNav();
 
     document.body.classList.add('is-ready');

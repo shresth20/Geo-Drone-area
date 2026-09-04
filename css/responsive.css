@@ -8,17 +8,8 @@
    ============================================================ */
 
 /* ---------------------------------------------------------- wide desktop */
-@media (min-width: 1600px) {
-  .stage { --btn-w: 11%; --btn-h: 9%; }
-}
-
 /* ---------------------------------------------------------- tablet */
 @media (max-width: 900px) {
-  .stage {
-    --btn-w: 14%;
-    --btn-h: 10.5%;
-  }
-
   .launch__label { font-size: clamp(8px, 1.7vw, 16px); letter-spacing: .1em; }
 
   .subtitle { width: min(74%, 620px); }
@@ -26,11 +17,6 @@
 
 /* ---------------------------------------------------------- phone */
 @media (max-width: 620px) {
-  .stage {
-    --btn-w: 18%;
-    --btn-h: 11%;
-  }
-
   .launch__label { font-size: clamp(7px, 2.1vw, 13px); letter-spacing: .06em; }
 
   .hud__caption { left: 8%; right: 8%; bottom: 14%; font-size: clamp(12px, 3.4vw, 20px); }
@@ -39,15 +25,8 @@
   /* the bar is the instruction, so it gets the width it needs; the
      roundel and the slashes are decoration and go first */
   .topbar { width: 92%; top: 4%; }
-  .topbar__frame { padding: 6px 10px; }
-  .topbar__text { font-size: clamp(8px, 2.35vw, 13px); letter-spacing: .008em; }
-
-  .target { left: 3%; top: 15%; width: clamp(58px, 15%, 92px); }
-
-  /* the units sublabel is dropped on small screens — see the
-     combined query near the end of this file */
-  .target__label { letter-spacing: .1em; }
-  .target__name  { letter-spacing: .1em; }
+  .topbar__frame { padding: 8px 12px; }
+  .topbar__text { font-size: clamp(10px, 2.9vw, 16px); letter-spacing: .008em; }
 
   /* narrow: the artwork's clear band is the same fraction of the
      image, but the controls in it can afford to be smaller */
@@ -60,22 +39,24 @@
 /* ---------------------------------------------------------- short / landscape phone */
 @media (max-height: 460px) {
   /* lift the plate so its shadow is not clipped by the stage edge */
-  .stage { --btn-h: 10.5%; --btn-cy: 89.5%; }
+  .stage { --btn-cy: 89.5%; }
   .hud__caption { bottom: 11%; font-size: clamp(10px, 2.6vh, 16px); }
   .hud__tally   { bottom: 5%; font-size: clamp(8px, 1.8vh, 12px); }
 
   /* almost no vertical room: the bar shrinks to a single tight line
      and the ship chip drops under it rather than beside it */
   .topbar { top: 3.4%; }
-  .topbar__frame { min-height: 30px; padding: 4px 8px; }
-  .topbar__text { font-size: clamp(8px, 2.7vh, 13px); }
+  .topbar__frame { min-height: 38px; padding: 6px 10px; }
+  .topbar__text { font-size: clamp(9px, 3.3vh, 16px); }
   .topbar { --badge: clamp(20px, 5.6vh, 34px); }
 
-  .target { top: 26%; width: clamp(54px, 8%, 96px); }
-
   /* barely any height: lift the whole landing tableau and close the
-     gap between the callouts and the pads */
-  .screen--landing { --ship-y: 44%; --base-y: 79%; }
+     gap between the callouts and the islands */
+  /* 71%, not the 69% the wider frames use: with only 390px of
+     height the craft's exhaust ends up within a few pixels of the
+     30-unit island's apex, so the island row drops to open the
+     gap back up rather than the craft rising into the bar. */
+  .screen--landing { --ship-y: 30%; --land-y: 71%; }
   /* barely any height: the band between the logo and the moon is
      only a few dozen pixels, so the block starts higher in it */
   .gate__inner { top: 74%; }
@@ -93,23 +74,20 @@
    Portrait stretches the cockpit vertically. The button and the
    readout follow the artwork, so only sizes need easing. */
 @media (max-aspect-ratio: 3/4) {
-  .stage {
-    --btn-w: 22%;
-    --btn-h: 8%;
-  }
   .launch__label { font-size: clamp(8px, 2.6vw, 15px); }
   .flyout__drone { width: 34%; }
 
   /* In portrait the LANDING tableau is bound by width, not height:
      three triangles in a row plus the ship's callouts have to fit
      across 390px. So --pu is pushed as far as the row allows, the
-     outer pads are spread to 19/81 to buy that extra width back, and
-     the ship is dropped to meet them — at the desktop spacing the
-     craft and the pads sat at opposite ends of an empty column. */
+     outer islands are spread to 20/80 to buy that extra width back,
+     and the two rows close up on each other — at the desktop
+     spacing the craft and the islands sat at opposite ends of an
+     empty column. */
   .screen--landing {
     --pu: min(1.62vw, 1.74vh);
-    --ship-y: 46%;
-    --base-y: 76%;
+    --ship-y: 40%;
+    --land-y: 66%;
   }
   .pad--l { --cx: 20%; }
   .pad--m { --cx: 50%; }
@@ -119,19 +97,18 @@
   .pad__area i { letter-spacing: .02em; }
 
   /* portrait stretches the feed tall: the bar can afford to wrap to
-     two lines, and the ship chip has room to sit lower and larger */
+     two lines */
   .topbar { width: 92%; }
-  .topbar__text { font-size: clamp(9px, 2.6vw, 16px); }
-  .target { top: 22%; width: clamp(66px, 18%, 120px); }
+  .topbar__text { font-size: clamp(11px, 3.2vw, 20px); }
 }
 
 /* ---------------------------------------------------------- small pads
-   --pu is min(vw, vh), so a pad is small whenever EITHER axis is
+   --pu is min(vw, vh), so an island is small whenever EITHER axis is
    small — a 390px-wide portrait phone and a 390px-tall landscape one
-   both end up with a 12-unit pad about 80px across. At that size
+   both end up with a 12-unit island about 80px across. At that size
    "SQ UNITS" renders around 6px: too small to read, and wide enough
-   to spill off the painted surface onto the rim. The number carries
-   it on its own, and the HUD line under the row states the units. */
+   to spill off the land into the water. The number carries it on its
+   own, and the HUD line under the row states the units. */
 @media (max-width: 620px), (max-height: 460px) {
   .pad__area i { display: none; }
 }
@@ -139,7 +116,7 @@
 
 /* ---------------------------------------------------------- pointer: coarse */
 @media (hover: none) {
-  .launch-slot.is-armed .launch:hover .launch__body { filter: none; }
+  .launch-slot.is-armed .launch:hover .launch__face { filter: none; }
 
   /* a fat finger needs more than the image box on a small feed */
   .zone__hit { inset: -10%; }

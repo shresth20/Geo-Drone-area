@@ -47,7 +47,23 @@
     tooSmall: 'This landing zone is too small. The spaceship cannot fit safely.mp3',
     tooLarge: 'This landing zone is too large. Try to find the exact match.mp3',
     perfectFit:'Perfect match! The spaceship fits exactly.mp3',
-    landed:   'Landing successful! Great work, Space Commander.mp3'
+    landed:   'Landing successful! Great work, Space Commander.mp3',
+
+    /* screens 4-8 (js/pages.js) run the survey feed's shape task and
+       the landing's area task back to back on one screen, so they
+       need one line the earlier screens never had: the hand-off from
+       the first task to the second. These two were recorded with the
+       rest and had nowhere to go until now.
+
+       The line that NAMES the shape is deliberately not here. It
+       says something different on each of the five screens ("the
+       spaceship is a square", "... a rhombus") and there is no clip
+       for any of them, so narrate() types it at the typewriter's own
+       reading rate instead. Record them, add them here under the
+       keys pages.js asks for, and they start speaking with no other
+       change — see narrate() in js/script.js. */
+    onlyMatching:'Now we only need to check these matching landing zones.mp3',
+    findArea: 'Find the area of spaceship, And select the suitable land.mp3'
   };
 
   var SFX = {
@@ -165,6 +181,11 @@
   }
 
   /* ---------------------------------------------------------- narration */
+  /* Is there a clip for this line? narrate() asks before it decides
+     whether to clock the typing off a voice or off the reading
+     rate. */
+  function hasVoice(key) { return !!VOICE[key]; }
+
   function say(key, opts) {
     opts = opts || {};
     var file = VOICE[key];
@@ -510,6 +531,7 @@
     resumeAll: resumeAll,
     unlock: unlock,
     say: say,
+    hasVoice: hasVoice,
     sfx: sfx,
     stopVoice: stopVoice,
     stopAll: stopAll,

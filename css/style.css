@@ -85,7 +85,19 @@ button { font: inherit; color: inherit; }
 .stage {
   position: fixed;
   inset: 0;
+
+  /* `clip`, not `hidden`. A screen waiting its turn sits at
+     scale(1.04), which puts ~26px of it past each edge of the
+     stage — and `hidden` clips that overflow while still leaving
+     the stage a SCROLLABLE box. Anything that scrolls an ancestor
+     into view (focusing a control, a browser's own scroll-into-
+     view) then slides the entire mission sideways by those 26px
+     and leaves a black band down one edge. `clip` makes no scroll
+     container at all, so there is nothing to scroll. `hidden`
+     stays as the fallback for anything that predates it. */
   overflow: hidden;
+  overflow: clip;
+
   background: #03050c;
   isolation: isolate;
 
@@ -95,11 +107,9 @@ button { font: inherit; color: inherit; }
   --dash-w: 34.0%;
   --dash-h: 13.9%;
 
-  /* launch button — the green box */
+  /* launch button — anchor only; the pill sizes to its own padding */
   --btn-cx: 50.7%;
   --btn-cy: 91.1%;
-  --btn-w: 11.6%;
-  --btn-h: 8.6%;
 
   /* canopy opening — where the drone flies out */
   --win-cx: 50%;
@@ -330,26 +340,26 @@ button { font: inherit; color: inherit; }
 
 
 /* ============================================================
-   LAUNCH BUTTON  (green box) — flat 2D
+   LAUNCH BUTTON — raised 3D plate, sized by its own padding
    ============================================================ */
 .launch-slot {
   position: absolute;
   left: var(--btn-cx);
   top: var(--btn-cy);
-  width: var(--btn-w);
-  height: var(--btn-h);
   z-index: 7;
   transform: translate(-50%, -50%);
   pointer-events: none;
 }
 
+/* the <button> is only a shell: it carries the reveal animation and
+   shrink-wraps the pill, which sizes itself from its own padding */
 .launch {
+  --btn-radius: clamp(5px, 0.7vw, 12px);
+
   position: relative;
-  display: block;
-  width: 100%;
-  height: 100%;
+  display: inline-block;
   padding: 0;
-  border: 0;
+  border: none;
   background: none;
   cursor: pointer;
   opacity: 0;
@@ -360,40 +370,76 @@ button { font: inherit; color: inherit; }
 .launch-slot.is-armed { pointer-events: auto; }
 .launch-slot.is-armed .launch { pointer-events: auto; }
 
-/* flat red plate: one fill, one outline, no bevel and no extrusion */
+/* red plate: a lit face riding above a darker base, glow on the edge */
 .launch__body {
-  position: absolute;
-  inset: 0;
+  position: relative;
   z-index: 2;
-  display: grid;
-  place-items: center;
-  border-radius: clamp(4px, 0.7vw, 12px);
-  background: #e8261a;
+
+  /* red palette */
+  --btn-glow: 255, 84, 62;      /* edge glow, as rgb channels         */
+  --btn-base: #8e1109;          /* the darker plinth under the face   */
+  --btn-top:  #ff5a44;          /* face gradient, top                 */
+  --btn-mid:  #f22a17;          /* face gradient, middle              */
+  --btn-bot:  #cf1206;          /* face gradient, bottom              */
+
+  /* how far the face sits above the base — the 3D lip */
+  --btn-lift: clamp(3px, 1.05vh, 10px);
+  --btn-padv: clamp(10px, 1.4vh, 14px);
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  line-height: 1;
+  /* the lip is added under the label so the text centres on the face,
+     not on the plinth */
+  padding: var(--btn-padv) clamp(22px, 3.8vw, 44px)
+           calc(var(--btn-padv) + var(--btn-lift));
+
+  border: none;
+  border-radius: var(--btn-radius);
+  background: var(--btn-base);
   box-shadow:
-    /* hard shadow along the bottom edge */
-    0 clamp(5px, 1.15vh, 14px) 0 -1px rgba(46, 4, 1, .95),
-    /* deep soft cast falling away beneath it */
-    0 clamp(10px, 2.2vh, 26px) clamp(12px, 2.4vh, 28px) -7px rgba(0, 0, 0, .8),
-    /* outline + halo */
-    inset 0 0 0 2px rgba(255, 158, 148, .85),
-    0 0 24px rgba(255, 58, 40, .38);
-  transition:
-    background .14s ease,
-    box-shadow .14s ease,
-    transform .09s ease;
+    /* contact shadow on the canopy */
+    0 clamp(4px, 0.9vh, 11px) clamp(9px, 1.9vh, 22px) -5px rgba(0, 0, 0, .75),
+    /* glow hugging the edge, then a softer bloom behind it */
+    0 0 clamp(5px, 0.8vh, 9px) rgba(var(--btn-glow), .55),
+    0 0 clamp(14px, 2.4vh, 28px) rgba(var(--btn-glow), .3);
+  transition: transform .09s ease, box-shadow .14s ease;
+}
+
+/* the raised face — everything the eye reads as the button top */
+.launch__face {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: var(--btn-lift);
+  border-radius: var(--btn-radius);
+  background:
+    linear-gradient(180deg,
+      var(--btn-top) 0%,
+      var(--btn-mid) 52%,
+      var(--btn-bot) 100%);
+  /* the shadow the face casts down onto the base */
+  box-shadow: 0 clamp(1px, 0.3vh, 3px) clamp(2px, 0.5vh, 6px) rgba(84, 8, 3, .55);
+  transition: bottom .09s ease, filter .14s ease;
 }
 
 .launch__label {
   position: relative;
   z-index: 2;
-  font-size: clamp(9px, 1.32vw, 22px);
+  font-family: "Poppins", "Segoe UI", system-ui, sans-serif;
+  font-size: clamp(8px, 1.15vw, 20px);
   font-weight: 700;
-  letter-spacing: .16em;
+  letter-spacing: .05em;
   color: #fff;
+  text-shadow: 0 clamp(1px, 0.2vh, 2px) 0 rgba(120, 14, 6, .55);
   pointer-events: none;
+  transition: transform .09s ease;
 }
 
-/* pulsing alert outline — flat, just an expanding ring */
+/* pulsing alert outline — an expanding pill ring */
 .launch__ring {
   position: absolute;
   left: 50%;
@@ -401,7 +447,7 @@ button { font: inherit; color: inherit; }
   width: 100%;
   height: 100%;
   transform: translate(-50%, -50%);
-  border-radius: clamp(4px, 0.7vw, 12px);
+  border-radius: var(--btn-radius);
   box-shadow: 0 0 0 0 rgba(255, 68, 48, .55);
   z-index: 1;
   pointer-events: none;
@@ -412,18 +458,27 @@ button { font: inherit; color: inherit; }
 /* appear */
 .launch.is-shown { animation: launchPop .5s cubic-bezier(.2, 1.3, .4, 1) forwards; }
 
-/* hover / press — colour and a hair of scale, never a fake push */
-.launch-slot.is-armed .launch:hover .launch__body { background: #ff372a; }
+/* hover — brighten the face, keep the lip where it is */
+.launch-slot.is-armed .launch:hover .launch__face { filter: brightness(1.1); }
 
+/* press — the face travels down and the lip closes up */
+.launch-slot.is-armed .launch:active .launch__face,
+.launch.is-pressed .launch__face {
+  bottom: 0;
+  filter: brightness(.92);
+}
+/* the face grows downward as the lip closes; the label rides with it */
+.launch-slot.is-armed .launch:active .launch__label,
+.launch.is-pressed .launch__label {
+  transform: translateY(calc(var(--btn-lift) * .5));
+}
 .launch-slot.is-armed .launch:active .launch__body,
 .launch.is-pressed .launch__body {
-  background: #b8140a;
-  transform: scale(.965);
+  transform: translateY(calc(var(--btn-lift) * .5));
   box-shadow:
-    0 clamp(2px, 0.4vh, 5px) 0 -1px rgba(46, 4, 1, .95),
-    0 clamp(5px, 0.9vh, 11px) clamp(7px, 1.3vh, 16px) -5px rgba(0, 0, 0, .75),
-    inset 0 0 0 2px rgba(255, 190, 182, .95),
-    0 0 34px rgba(255, 70, 50, .55);
+    0 clamp(2px, 0.4vh, 5px) clamp(5px, 1vh, 12px) -5px rgba(0, 0, 0, .7),
+    0 0 clamp(6px, 1vh, 11px) rgba(var(--btn-glow), .7),
+    0 0 clamp(18px, 3vh, 34px) rgba(var(--btn-glow), .4);
 }
 
 /* used up — let it fade out where it stands */
@@ -435,11 +490,9 @@ button { font: inherit; color: inherit; }
 .launch:focus-visible { outline: none; }
 .launch:focus-visible .launch__body {
   box-shadow:
-    0 clamp(5px, 1.15vh, 14px) 0 -1px rgba(46, 4, 1, .95),
-    0 clamp(10px, 2.2vh, 26px) clamp(12px, 2.4vh, 28px) -7px rgba(0, 0, 0, .8),
-    inset 0 0 0 2px rgba(255, 158, 148, .85),
+    0 clamp(4px, 0.9vh, 11px) clamp(9px, 1.9vh, 22px) -5px rgba(0, 0, 0, .75),
     0 0 0 3px rgba(120, 220, 255, .9),
-    0 0 24px rgba(255, 58, 40, .38);
+    0 0 clamp(14px, 2.4vh, 28px) rgba(var(--btn-glow), .3);
 }
 
 
@@ -476,11 +529,11 @@ button { font: inherit; color: inherit; }
 }
 .scanner.is-on { opacity: 1; }
 
-/* faint red bloom over the whole feed while scanning */
+/* faint green bloom over the whole feed while scanning */
 .scanner__wash {
   position: absolute;
   inset: 0;
-  background: radial-gradient(120% 100% at 50% 50%, rgba(255, 40, 40, .10), rgba(255, 0, 0, 0) 70%);
+  background: radial-gradient(120% 100% at 50% 50%, rgba(60, 255, 140, .10), rgba(0, 255, 110, 0) 70%);
   opacity: 0;
   transition: opacity .6s ease;
 }
@@ -502,15 +555,15 @@ button { font: inherit; color: inherit; }
   inset: 0;
   border-radius: 999px;
   background: linear-gradient(to bottom,
-    rgba(255, 90, 80, 0),
-    #ff5b4e 8%,
-    #fff0ee 50%,
-    #ff5b4e 92%,
-    rgba(255, 90, 80, 0));
+    rgba(60, 255, 150, 0),
+    #3bff9b 8%,
+    #eafff2 50%,
+    #3bff9b 92%,
+    rgba(60, 255, 150, 0));
   box-shadow:
-    0 0 10px rgba(255, 60, 45, .95),
-    0 0 28px rgba(255, 40, 30, .8),
-    0 0 70px rgba(255, 20, 10, .55);
+    0 0 10px rgba(60, 255, 140, .95),
+    0 0 28px rgba(20, 255, 120, .8),
+    0 0 70px rgba(0, 230, 100, .55);
 }
 
 /* soft wide halo either side of the line */
@@ -522,9 +575,9 @@ button { font: inherit; color: inherit; }
   width: 2600%;
   transform: translateX(-50%);
   background: linear-gradient(to right,
-    rgba(255, 30, 20, 0) 46%,
-    rgba(255, 60, 40, .20) 50%,
-    rgba(255, 30, 20, 0) 54%);
+    rgba(0, 255, 110, 0) 46%,
+    rgba(60, 255, 140, .20) 50%,
+    rgba(0, 255, 110, 0) 54%);
   filter: blur(6px);
 }
 
@@ -545,43 +598,51 @@ button { font: inherit; color: inherit; }
   transform: translate(-50%, -50%);
 }
 
+/* The artwork is shot from DIRECTLY ABOVE, so an island coming up
+   out of the water travels towards the camera, not up the screen:
+   the emergence is a scale, never a translate, and the shadow it
+   throws into the water has no offset. See zoneRise. */
 .zone__img {
   position: relative;
   z-index: 2;
   width: 100%;
   opacity: 0;
-  transform: translateY(46%) scale(.62);
+  transform: scale(.34);
   filter:
-    drop-shadow(0 12px 22px rgba(0, 0, 0, .55))
-    drop-shadow(0 0 18px rgba(120, 200, 255, .25));
-  will-change: transform, opacity;
+    drop-shadow(0 0 15px rgba(2, 26, 52, .72))
+    drop-shadow(0 0 26px rgba(120, 210, 255, .26));
+  will-change: transform, opacity, filter;
 }
 
-/* dark water displaced under the shape */
+/* The deep water the island displaces. Concentric with the shape
+   rather than tucked under it: from above, the dark is the mass
+   still below the surface, spread evenly around the land. */
 .zone__wake {
   position: absolute;
   left: 50%;
-  bottom: 4%;
-  width: 132%;
-  aspect-ratio: 3.4 / 1;
-  transform: translate(-50%, 40%) scale(.4);
+  top: 50%;
+  width: 152%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%) scale(.3);
   border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(3, 22, 46, .8), rgba(3, 22, 46, 0) 74%);
+  background: radial-gradient(closest-side, rgba(3, 22, 46, .78), rgba(3, 22, 46, 0) 72%);
   opacity: 0;
   z-index: 1;
 }
 
-/* expanding surface rings */
+/* Surface rings running out from the breach. Circular, because a
+   ripple seen from overhead is a circle — the flattened ellipses
+   this replaced only read as ripples from a low angle. */
 .zone__ring {
   position: absolute;
   left: 50%;
-  bottom: 6%;
-  width: 120%;
-  aspect-ratio: 3.2 / 1;
-  transform: translate(-50%, 45%) scale(.25);
+  top: 50%;
+  width: 136%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%) scale(.2);
   border-radius: 50%;
-  border: 2px solid rgba(190, 235, 255, .55);
-  box-shadow: 0 0 16px rgba(150, 225, 255, .35);
+  border: max(2px, .13vw) solid rgba(190, 235, 255, .5);
+  box-shadow: 0 0 18px rgba(150, 225, 255, .3);
   opacity: 0;
   z-index: 3;
 }
@@ -590,13 +651,13 @@ button { font: inherit; color: inherit; }
 .zone__splash {
   position: absolute;
   left: 50%;
-  bottom: 2%;
-  width: 150%;
-  aspect-ratio: 3 / 1;
-  transform: translate(-50%, 40%) scale(.3);
+  top: 50%;
+  width: 158%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%) scale(.24);
   border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(235, 250, 255, .85), rgba(200, 240, 255, 0) 70%);
-  filter: blur(4px);
+  background: radial-gradient(closest-side, rgba(235, 250, 255, .82), rgba(200, 240, 255, 0) 66%);
+  filter: blur(5px);
   opacity: 0;
   z-index: 3;
 }
@@ -652,9 +713,9 @@ button { font: inherit; color: inherit; }
 
 .zones.is-picking .zone.is-up:not(.is-picked):has(.zone__hit:focus-visible) .zone__img {
   animation: none;
-  transform: translateY(-2.5%) scale(1.05);
+  transform: scale(1.065);
   filter:
-    drop-shadow(0 14px 26px rgba(0, 0, 0, .6))
+    drop-shadow(0 0 18px rgba(2, 26, 52, .7))
     drop-shadow(0 0 0 3px rgba(120, 220, 255, .95))
     drop-shadow(0 0 30px rgba(120, 220, 255, .7));
 }
@@ -662,22 +723,24 @@ button { font: inherit; color: inherit; }
 @media (hover: hover) {
   .zones.is-picking .zone.is-up:not(.is-picked):hover .zone__img {
     animation: none;
-    transform: translateY(-2.5%) scale(1.045);
+    transform: scale(1.055);
     filter:
-      drop-shadow(0 14px 26px rgba(0, 0, 0, .6))
+      drop-shadow(0 0 18px rgba(2, 26, 52, .7))
       drop-shadow(0 0 26px rgba(120, 220, 255, .55));
   }
 }
 
 /* The tick that lands on a correct pick.
 
-   Placed at 60% down the box, not at the top: the artwork is a
-   square canvas with the shape inscribed, so a triangle's apex is
-   surrounded by transparent pixels and a badge up there would
-   float in open water. 60% is inside all five silhouettes. */
+   Parked on each silhouette's OWN centre of mass (--pick-y, set per
+   shape below), measured off the alpha channel. One shared figure
+   cannot serve all three: the canvas is bigger than the shape
+   inscribed in it, so a triangle's centre of area sits well below a
+   square's and a badge on the shared middle would hang off the
+   triangle's apex into open water. */
 .zone__pick {
   position: absolute;
-  top: 60%;
+  top: var(--pick-y, 52%);
   left: 50%;
   z-index: 5;
   display: grid;
@@ -709,7 +772,7 @@ button { font: inherit; color: inherit; }
 .zone.is-picked .zone__img {
   animation: zonePicked .62s cubic-bezier(.22, 1.3, .36, 1) forwards !important;
   filter:
-    drop-shadow(0 12px 22px rgba(0, 0, 0, .55))
+    drop-shadow(0 0 15px rgba(2, 26, 52, .7))
     drop-shadow(0 0 26px rgba(55, 245, 200, .75));
 }
 
@@ -728,7 +791,7 @@ button { font: inherit; color: inherit; }
 .zone.is-wrong .zone__img {
   animation: zoneWrong .52s cubic-bezier(.36, .07, .19, .97) !important;
   filter:
-    drop-shadow(0 12px 22px rgba(0, 0, 0, .55))
+    drop-shadow(0 0 15px rgba(2, 26, 52, .7))
     drop-shadow(0 0 24px rgba(255, 78, 62, .8));
 }
 
@@ -751,12 +814,40 @@ button { font: inherit; color: inherit; }
 .zone                        { z-index: 2; }
 
 
-/* placement — kept clear of the painted rock clusters */
-.zone--a { --x: 30%;   --y: 63%; --w: 17.5%; }  /* triangle · large  */
-.zone--b { --x: 44%;   --y: 31%; --w: 11.5%; }  /* square            */
-.zone--c { --x: 57.5%; --y: 52%; --w: 13.5%; }  /* triangle · medium */
-.zone--d { --x: 70%;   --y: 26%; --w: 11%;   }  /* trapezium         */
-.zone--e { --x: 73%;   --y: 70%; --w: 10%;   }  /* triangle · small  */
+/* Centre of area per silhouette, off the alpha channel — the row
+   the tick is stamped on. A triangle's sits far below a square's
+   because the canvas corners around its apex are empty, and a badge
+   on the shared middle of the box would hang off it into the sea. */
+.zone[data-shape="triangle"]  { --pick-y: 63%; }
+.zone[data-shape="square"]    { --pick-y: 50%; }
+.zone[data-shape="trapezium"] { --pick-y: 56%; }
+
+/* Placement, kept clear of the thirteen islets painted into
+   s2-bg (2).png. Those ring the frame — x under 20% or over 75%,
+   y under 16% or over 87% — so the five zones live in the open
+   middle band, which also keeps them out from under the narration
+   bar along the top.
+
+   --w sizes the CANVAS, not the land, and the three silhouettes
+   fill their canvases by quite different amounts (triangle 97.5%
+   of the box across, trapezium 98.5%, square only 79.7%). So the
+   figures below are the ones that put the PAINTED land in a clean
+   descending order — 15%, 12%, 10%, 9.5%, 8.8% of the stage — not
+   figures that match each other. */
+.zone--a { --x: 27%; --y: 64%; --w: 15.4%; }  /* triangle · large  */
+.zone--b { --x: 44%; --y: 28%; --w: 12%;   }  /* square            */
+.zone--c { --x: 57%; --y: 57%; --w: 12.3%; }  /* triangle · medium */
+.zone--d { --x: 69%; --y: 25%; --w: 10.2%; }  /* trapezium         */
+.zone--e { --x: 72%; --y: 74%; --w: 9%;    }  /* triangle · small  */
+
+/* The upper row sits at 25/28% and the lower at 57/64/74% rather
+   than closer together, because the hit target is a BOX around a
+   square canvas and the boxes grow tall as the stage gets wide: at
+   21:9 a zone's box is nearly 30% of the frame high. Splitting the
+   two rows this far keeps the trapezium's box clear of the medium
+   triangle's at every ratio the lesson runs at. The square and that
+   triangle still clip corners by well under a percent there, which
+   is what the triangles-win order above is for. */
 
 
 /* ---------------------------------------------------------- HUD chrome */
@@ -766,7 +857,9 @@ button { font: inherit; color: inherit; }
   z-index: 7;
   pointer-events: none;
   opacity: 0;
-  transition: opacity .8s ease;
+  /* the transform is the room made for the NEXT button on the
+     landing screen — see .hud.is-lifted */
+  transition: opacity .8s ease, transform .45s cubic-bezier(.3, 0, .3, 1);
 }
 .hud.is-on { opacity: 1; }
 
@@ -827,13 +920,14 @@ button { font: inherit; color: inherit; }
   left: 50%;
   top: 4.6%;
   z-index: 9;
-  width: min(84%, 1180px);
+  width: min(74%, 1180px);
+  height: 200px;
 
   /* the roundel's diameter, referenced twice: once to size it, once
      to reserve the same room on BOTH sides of the line so the text
      stays optically centred in the pill instead of being pushed off
      by the badge sitting in front of it */
-  --badge: clamp(26px, 4.6vh, 52px);
+  --badge: clamp(30px, 5.4vh, 60px);
 
   transform: translate(-50%, -190%);
   opacity: 0;
@@ -855,8 +949,8 @@ button { font: inherit; color: inherit; }
   position: relative;
   display: flex;
   align-items: center;
-  min-height: clamp(36px, 6.4vh, 72px);
-  padding: clamp(5px, .8vh, 11px) clamp(10px, 1.2vw, 20px);
+  min-height: clamp(46px, 8.2vh, 92px);
+  padding: clamp(7px, 1.1vh, 15px) clamp(14px, 1.6vw, 26px);
   border-radius: 999px;
   background:
     radial-gradient(130% 210% at 50% 128%, rgba(38, 122, 190, .38), rgba(38, 122, 190, 0) 68%),
@@ -914,7 +1008,7 @@ button { font: inherit; color: inherit; }
   padding-inline: calc(var(--badge) + clamp(4px, .5vw, 10px));
   font-family: "Libre Baskerville", Georgia, "Times New Roman", serif;
   font-weight: 700;
-  font-size: clamp(9px, 1.18vw, 21px);
+  font-size: clamp(11px, 1.45vw, 26px);
   line-height: 1.3;
   letter-spacing: .012em;
   color: #f2fbff;
@@ -952,74 +1046,6 @@ button { font: inherit; color: inherit; }
 
 
 /* ============================================================
-   TARGET SHAPE CHIP
-
-   “The spaceship is a triangle” is only useful if the triangle is
-   still on screen while the player hunts for matches, so the ship
-   stays parked in the corner for the whole task.
-   ============================================================ */
-.target {
-  position: absolute;
-  left: 4.5%;
-  top: 18%;
-  z-index: 8;
-  width: clamp(74px, 9.5%, 168px);
-  padding: clamp(6px, .8vh, 12px) clamp(6px, .7vw, 12px) clamp(4px, .6vh, 9px);
-  text-align: center;
-  clip-path: polygon(
-    0 11px, 11px 0,
-    calc(100% - 11px) 0, 100% 11px,
-    100% calc(100% - 11px), calc(100% - 11px) 100%,
-    11px 100%, 0 calc(100% - 11px));
-  background: linear-gradient(180deg, rgba(10, 40, 78, .88), rgba(4, 16, 34, .92));
-  box-shadow:
-    inset 0 0 0 2px rgba(79, 216, 255, .45),
-    0 8px 26px rgba(0, 0, 0, .5);
-  opacity: 0;
-  transform: translateX(-24%) scale(.9);
-  pointer-events: none;
-  transition:
-    opacity .55s ease,
-    transform .7s cubic-bezier(.22, 1, .36, 1);
-}
-
-.target.is-on {
-  opacity: 1;
-  transform: none;
-}
-
-.target__label,
-.target__name {
-  margin: 0;
-  font-family: "Poppins", "Segoe UI", system-ui, sans-serif;
-  font-weight: 700;
-  letter-spacing: .18em;
-  line-height: 1.4;
-}
-
-.target__label {
-  font-size: clamp(6px, .62vw, 11px);
-  color: rgba(140, 225, 255, .8);
-}
-
-.target__name {
-  font-size: clamp(7px, .78vw, 13px);
-  color: #eaf8ff;
-  text-shadow: 0 0 14px rgba(70, 200, 255, .6);
-}
-
-.target__art {
-  margin: clamp(2px, .4vh, 6px) 0;
-}
-
-.target__art img {
-  width: 100%;
-  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, .55));
-  animation: targetHover 3.4s ease-in-out infinite;
-}
-
-
-/* ============================================================
    SCREEN 3 — THE LANDING
 
    Layout runs off ONE unit, --pu, so the whole tableau keeps its
@@ -1028,31 +1054,57 @@ button { font: inherit; color: inherit; }
    height: whichever axis is scarcer sets the size, and neither the
    pads nor the ship's callouts ever run off the frame.
 
-   Every anchor below is expressed against a shape's BASE LINE
-   rather than its box, because that is the line the artwork reads
-   as the ground and the line the ship has to touch down on.
+   Every anchor below is expressed against a shape's CENTRE OF AREA
+   rather than its box or a base line. The artwork is seen from
+   straight above, so there is no ground line to stand on any more:
+   landing is one flat shape coming down onto another, and the only
+   alignment that reads as square is centre over centre.
+
+   The two figures, measured off the alpha channel:
+
+     Triangle.png            fills 40.857% of its canvas,
+                             centre of area (49.86%, 63.32%)
+     Triangle spaceship.png  hull fills 31.389% of its canvas,
+                             centre of area (49.92%, 47.72%)
+
+   Everything below, and PAD_C/SHIP_C in js/animation.js, is those
+   four numbers.
    ============================================================ */
 .screen--landing {
   --pu: min(1vw, 1.74vh);
 
-  /* all three pads sit their base line on this row — the shared
-     line is what makes them read as one shore. High enough that the
-     largest pad's rocky skirt clears the caption underneath it, and
-     that a craft sliding off the front still has water to go into. */
-  --base-y: 74%;
+  /* All three islands put their centre of area on this row, which
+     is what makes them read as one archipelago rather than three
+     shapes at three heights. */
+  --land-y: 71%;
 
-  /* where the ship hovers before it is sent down */
-  --ship-y: 41%;
+  /* the row the craft's own centre of area hovers on before it is
+     sent down. 31% leaves the callouts clear of the narration bar
+     above and the flame clear of the islands below. */
+  --ship-y: 31%;
 
-  /* 16.47 = 17 × 0.9688. The 20-unit pad's box is 17 units wide,
-     and the ship's painted triangle is 3.1% wider inside its box
-     than the pad's top face is inside its own. Shrinking the ship
-     box by that factor makes the craft EXACTLY 20 units of land,
-     so a perfect fit is perfect on the pixel and not by eye. */
-  --ship-k: 16.47;
+  /* 19.40 = 17 × 1.1409, and 1.1409 is sqrt(40.857 / 31.389) — the
+     land fills more of its canvas than the hull fills its own, so
+     the ship's BOX has to be the larger of the two for the two
+     painted shapes to come out the same size. That factor makes the
+     craft cover EXACTLY 20 units of land, so a perfect fit is
+     perfect by measurement and not by eye. */
+  --ship-k: 19.40;
+
+  /* the hull's centre of area, in box units. A variable because the
+     round screens (4-8) fly a square, a rectangle, a parallelogram,
+     a trapezium and a rhombus through this same block. */
+  --scx: .4992;
+  --scy: .4772;
 }
 
-.s4-bg { background-image: url("../assets/images/s4-bg.png"); }
+/* Same water as the survey feed. The islands are drawn from
+   straight overhead, and the oblique sea that used to be here (the
+   old s4-bg.png, since removed from the project) put the camera in
+   two places at once. Its own class rather than a second .s2-bg,
+   because that one fades in from black on the survey screen and
+   this one is simply there. */
+.s3-bg { background-image: url("../assets/images/s2-bg (2).png"); }
 
 
 /* ---------------------------------------------------------- the spaceship
@@ -1075,9 +1127,9 @@ button { font: inherit; color: inherit; }
   --lean: 1;
   width: calc(var(--ship-k) * var(--pu));
   aspect-ratio: 1;
-  /* the ship's BASE CENTRE hovers over (50%, --ship-y) */
-  left: calc(50% - 0.4984 * var(--ship-k) * var(--pu));
-  top: calc(var(--ship-y) - 0.698 * var(--ship-k) * var(--pu));
+  /* the hull's CENTRE OF AREA hovers over (50%, --ship-y) */
+  left: calc(50% - var(--scx) * var(--ship-k) * var(--pu));
+  top: calc(var(--ship-y) - var(--scy) * var(--ship-k) * var(--pu));
   transform-origin: 0 0;
   opacity: 0;
   transition: opacity .9s ease;
@@ -1088,9 +1140,11 @@ button { font: inherit; color: inherit; }
   position: relative;
   width: 100%;
   height: 100%;
-  /* the middle of the base: the craft pivots on the ground, which
-     is what makes a topple look like a topple and not a spin */
-  transform-origin: 49.84% 69.8%;
+  /* Its centre of area. Seen from overhead there is no ground to
+     pivot on: a craft that loses its footing yaws about its own
+     middle, and pivoting on a base line would swing the whole hull
+     across the island like a compass needle. */
+  transform-origin: calc(var(--scx) * 100%) calc(var(--scy) * 100%);
 }
 
 .ship.is-in .ship__craft { animation: shipBob 3.6s ease-in-out infinite; }
@@ -1191,7 +1245,12 @@ button { font: inherit; color: inherit; }
      4  .ship         the craft, over the land
      5  .pad__fit     the verdict, traced over the craft
      5  .splash       water thrown up over the craft
-     6  .layer--hud   the frame (global)                          */
+     5  .crash        dust thrown up over the craft
+     6  .layer--hud   the frame (global)
+     7  .hud          the caption and the tally (global)
+     8  .confetti     the celebration, falling in front of both
+     9  .topbar       the narration bar (global)
+    12  .advance      the way on, centred on the footer         */
 .pads {
   position: absolute;
   inset: 0;
@@ -1202,29 +1261,37 @@ button { font: inherit; color: inherit; }
   position: absolute;
   width: calc(var(--k) * var(--pu));
   aspect-ratio: 1;
-  /* the pad's top-face BASE CENTRE lands on (--cx, --base-y) */
-  left: calc(var(--cx) - 0.495 * var(--k) * var(--pu));
-  top: calc(var(--base-y) - 0.700 * var(--k) * var(--pu));
+  /* the island's CENTRE OF AREA lands on (--cx, --land-y) */
+  /* the triangle's own figures, overridden per pad on the round
+     screens (see js/pages.js), where two shapes share one row */
+  --pcx: .4986;
+  --pcy: .6332;
+  --cy: var(--land-y);
+  left: calc(var(--cx) - var(--pcx) * var(--k) * var(--pu));
+  top: calc(var(--cy) - var(--pcy) * var(--k) * var(--pu));
 }
 
 /* --k = 17 × sqrt(area / 20), so the DRAWN areas are in true
    proportion to the numbers printed on them, and the 20-unit pad
    comes out exactly the size of the ship */
-/* --cx is where each base CENTRE sits. The outer two are held well
-   inside the frame because a failed landing slides off the edge of
-   its pad, and a craft toppling off the leftmost one at 21% ended up
-   half behind the painted bezel. */
+/* --cx is where each island's CENTRE sits. The outer two are held
+   well inside the frame because a failed landing slides off the
+   edge of its island, and a craft going over the leftmost one at
+   21% ended up half behind the painted bezel. */
 .pad--l { --k: 20.82; --cx: 24%; }   /* 30 sq units — too much room */
 .pad--m { --k: 13.17; --cx: 50%; }   /* 12 sq units — too small     */
 .pad--r { --k: 17.00; --cx: 76%; }   /* 20 sq units — the fit       */
 
+/* As on the survey feed: shot from overhead, so the island arrives
+   by growing towards the camera and its shadow sits under it on
+   every side instead of being cast down the screen. */
 .pad__img {
   position: relative;
   z-index: 2;
   width: 100%;
   opacity: 0;
-  transform: translateY(26%) scale(.8);
-  filter: drop-shadow(0 14px 24px rgba(0, 0, 0, .5));
+  transform: scale(.72);
+  filter: drop-shadow(0 0 20px rgba(2, 26, 52, .6));
   will-change: transform, opacity;
   transition: filter .35s ease;
 }
@@ -1237,11 +1304,10 @@ button { font: inherit; color: inherit; }
 /* the printed area, sat in the middle of the painted surface */
 .pad__area {
   position: absolute;
-  left: 49.5%;
-  /* 48%: the triangle widens downward, so the block wants to sit a
-     little below the geometric middle to look centred — but not so
-     low that it meets the invitation ring on the base line */
-  top: 48%;
+  /* dead on the island's centre of area, which is where a number
+     printed on a triangle has to sit to look centred */
+  left: var(--ax, 49.9%);
+  top: var(--ay, 62%);
   z-index: 3;
   margin: 0;
   display: grid;
@@ -1295,10 +1361,11 @@ button { font: inherit; color: inherit; }
   border: 0;
   background: none;
   -webkit-tap-highlight-color: transparent;
-  /* the hit shape is the painted surface, not the square box: the
-     pads stand close together and a square target would let a tap
-     aimed at one triangle's empty corner land on its neighbour */
-  clip-path: polygon(50.6% 7.6%, 93% 70%, 6% 70%);
+  /* the hit shape is the painted land, not the square box: the
+     islands stand close together and a square target would let a
+     tap aimed at one triangle's empty corner land on its
+     neighbour. Traced on the silhouette's own corners. */
+  clip-path: var(--clip, polygon(50.1% 7.7%, 98.6% 91.4%, 1.1% 91.4%));
   opacity: 0;
   pointer-events: none;
   cursor: pointer;
@@ -1312,24 +1379,39 @@ button { font: inherit; color: inherit; }
 
 .pad__hit:focus-visible { outline: none; }
 
-/* the invitation ring, sat on the surface the ship would touch */
-/* Sat on the base line, and very flat. Two reasons: a rounder
-   ellipse put its top arc straight through the printed area and read
-   as a stray line ruled across the number, and a ring lying on a
-   surface seen from this angle IS this flat. */
+/* The invitation ring: a circle in the water AROUND the island,
+   not an ellipse ruled across it. Seen from straight above a ring
+   on the water is round, and putting it outside the land keeps it
+   off the number printed on the island — the flat ellipse this
+   replaced ran its top arc straight through the digits.
+
+   Centred on the island's centre of area and 118% of the box wide:
+   from that centre the three corners of the silhouette are 55.7%,
+   56.2% and 56.2% of the box away, so a circle of radius 59% clears
+   all three by about the same margin. */
 .pad__ring {
   position: absolute;
-  left: 49.5%;
-  top: 70%;
-  width: 80%;
-  aspect-ratio: 8 / 1;
+  z-index: 1;
+  left: var(--rx, 49.9%);
+  top: var(--ry, 63.3%);
+  width: var(--rw, 118%);
+  aspect-ratio: 1;
   transform: translate(-50%, -50%);
   border-radius: 50%;
-  border: max(2px, .16vw) solid rgba(150, 235, 255, .75);
-  box-shadow: 0 0 18px rgba(120, 220, 255, .5);
+  border: max(2px, .15vw) solid rgba(150, 235, 255, .7);
+  box-shadow:
+    0 0 18px rgba(120, 220, 255, .5),
+    inset 0 0 18px rgba(120, 220, 255, .28);
   opacity: 0;
 }
 
+/* The ring is a sibling of .pad__hit rather than a child of it, so
+   the paint order gains one more entry ahead of the list above:
+
+     1  .pad__ring    the invitation, lying in the water
+
+   which also means it passes UNDER the island rather than over it,
+   the way a ripple running out from a shore does. */
 .pads.is-choosing .pad.is-up .pad__ring { animation: padBeckon 2.4s ease-in-out infinite; }
 
 @media (hover: hover) {
@@ -1349,7 +1431,7 @@ button { font: inherit; color: inherit; }
 
 /* Outline of the surface the ship was asked to fit onto: green
    where it fitted, amber where it rattled around inside, red where
-   it hung over the edges. Traced on the measured top face, so the
+   it hung over the edges. Traced on the measured plateau, so the
    outline is the actual land and not a decoration near it. */
 .pad__fit {
   position: absolute;
@@ -1402,21 +1484,218 @@ button { font: inherit; color: inherit; }
 
 .splash__foam {
   width: 100%;
-  aspect-ratio: 2.6 / 1;
-  background: radial-gradient(closest-side, rgba(238, 251, 255, .92), rgba(190, 235, 255, 0) 72%);
-  filter: blur(3px);
+  aspect-ratio: 1;
+  background: radial-gradient(closest-side, rgba(238, 251, 255, .92), rgba(190, 235, 255, 0) 70%);
+  filter: blur(4px);
 }
 
 .splash__ring {
-  width: 84%;
-  aspect-ratio: 3 / 1;
-  border: 2px solid rgba(196, 240, 255, .7);
+  width: 88%;
+  aspect-ratio: 1;
+  border: max(2px, .13vw) solid rgba(196, 240, 255, .65);
   box-shadow: 0 0 16px rgba(150, 225, 255, .45);
 }
 
 .splash.is-on .splash__foam    { animation: splashFoam 1.1s ease-out forwards; }
 .splash.is-on .splash__ring    { animation: splashOut 1.9s ease-out .06s forwards; }
 .splash.is-on .splash__ring--b { animation: splashOut 2.2s ease-out .34s forwards; }
+
+
+/* ---------------------------------------------------------- ground impact
+   The 30-unit island is far bigger than the craft, so a craft that
+   loses its balance on it never reaches the water: it goes over ON
+   THE LAND and stays there. This is the dust that comes up when it
+   does — same job as .splash, thrown over dry rock instead of sea,
+   and parked on the point of impact by JS for the same reason. */
+.crash {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 5;
+  width: calc(15 * var(--pu));
+  aspect-ratio: 1;
+  margin-left: calc(-7.5 * var(--pu));
+  margin-top: calc(-7.5 * var(--pu));
+  pointer-events: none;
+  opacity: 0;
+}
+.crash.is-on { opacity: 1; }
+
+.crash__flash,
+.crash__dust,
+.crash__ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(.2);
+  opacity: 0;
+}
+
+/* the hit itself — one frame of white heat */
+.crash__flash {
+  width: 52%;
+  aspect-ratio: 1;
+  background: radial-gradient(closest-side, rgba(255, 251, 236, .95), rgba(255, 196, 92, 0) 70%);
+}
+
+/* what it kicks up: the island's own dust, so the burst is the
+   colour of the rock rather than of sea foam */
+.crash__dust {
+  width: 100%;
+  aspect-ratio: 1;
+  background: radial-gradient(closest-side, rgba(232, 148, 74, .78), rgba(150, 74, 30, 0) 68%);
+  filter: blur(5px);
+}
+
+.crash__ring {
+  width: 86%;
+  aspect-ratio: 1;
+  border: max(2px, .13vw) solid rgba(255, 206, 138, .7);
+  box-shadow: 0 0 16px rgba(255, 170, 80, .45);
+}
+
+.crash.is-on .crash__flash  { animation: crashFlash .42s ease-out forwards; }
+.crash.is-on .crash__dust   { animation: crashDust 1.35s ease-out forwards; }
+.crash.is-on .crash__ring   { animation: crashOut 1.6s ease-out .05s forwards; }
+.crash.is-on .crash__ring--b { animation: crashOut 1.9s ease-out .3s forwards; }
+
+/* The wreck: scorched, and no longer catching the light the way a
+   flying craft does. Left on the island until the retry resets it. */
+.ship.is-wrecked .ship__img {
+  filter:
+    brightness(.72) saturate(.6)
+    drop-shadow(0 0 16px rgba(60, 20, 6, .7));
+  transition: filter .5s ease;
+}
+
+
+/* ---------------------------------------------------------- confetti
+   The reward for the right answer. Pieces are appended by
+   M.confetti() with their own size, tint, fall time, sway and spin;
+   all this block owns is the frame they fall through.
+
+   Above the HUD lines (z 7) so the paper passes in front of the
+   readout, below the narration bar (z 9) so it never obscures the
+   instruction. overflow:hidden keeps the shower inside the stage
+   instead of growing a scrollbar on the way past the bottom. */
+.confetti {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.confetti i {
+  position: absolute;
+  top: 0;
+  /* the piece starts above the frame, so the shower arrives from
+     off-screen rather than blinking into existence at the top edge */
+  opacity: 0;
+  will-change: transform, opacity;
+  animation: confettiFall var(--dur, 2600ms) linear var(--delay, 0ms) forwards;
+}
+
+
+/* ---------------------------------------------------------- advance
+   Offered only once the craft is planted, centred on the footer.
+
+   The footer already has two lines in it — the formula and the
+   running tally — so the button does not squeeze in beside them:
+   .hud is lifted by exactly the height the button takes up (see
+   .hud.is-lifted below) and the three read as one stack, formula
+   over tally over button. That is why the height is a variable
+   rather than whatever the padding happens to add up to. */
+.screen--landing { --advance-h: clamp(32px, 2.5vw, 42px); }
+
+/* the slot spans the footer and centres its one child; the button's
+   own transform is spoken for by the entry animation and the press */
+.advance {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: max(14px, 2.6%);
+  z-index: 12;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.advance__btn {
+  display: flex;
+  align-items: center;
+  gap: .55em;
+  height: var(--advance-h);
+  padding: 0 1.2em 0 1.45em;
+  border: 0;
+  border-radius: 999px;
+  font-family: "Poppins", "Segoe UI", system-ui, sans-serif;
+  font-weight: 700;
+  font-size: clamp(11px, 1.15vw, 17px);
+  letter-spacing: .18em;
+  color: #04121f;
+  cursor: pointer;
+  pointer-events: auto;
+  background: linear-gradient(180deg, #b7f0ff, #43c8f5 55%, #1a8fd0);
+  box-shadow:
+    0 2px 0 #1279b3, 0 4px 0 #0d5f8f,
+    0 10px 20px rgba(0, 0, 0, .5),
+    0 0 34px rgba(70, 200, 255, .45),
+    inset 0 2px 3px rgba(255, 255, 255, .7);
+  transition: transform .1s ease, box-shadow .1s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.advance__btn[hidden] { display: none; }
+
+/* same two-step as the start gate: unhide, reflow, then animate in,
+   so the browser has a starting frame to transition away from */
+.advance__btn { opacity: 0; }
+.advance__btn.is-in {
+  opacity: 1;
+  animation: advanceRise .55s cubic-bezier(.22, 1, .36, 1) backwards,
+             advanceBeckon 2.6s ease-in-out .8s infinite;
+}
+
+.advance__label { display: block; }
+
+.advance__arrow {
+  width: 1.05em;
+  height: 1.05em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.advance__btn:active {
+  transform: translateY(4px);
+  animation-play-state: paused;
+  box-shadow:
+    0 1px 0 #0d5f8f,
+    0 5px 10px rgba(0, 0, 0, .45),
+    0 0 34px rgba(70, 200, 255, .55),
+    inset 0 2px 3px rgba(255, 255, 255, .55);
+}
+
+.advance__btn:focus-visible {
+  outline: none;
+  box-shadow:
+    0 2px 0 #1279b3, 0 4px 0 #0d5f8f,
+    0 10px 20px rgba(0, 0, 0, .5),
+    0 0 0 3px rgba(160, 235, 255, .95),
+    inset 0 2px 3px rgba(255, 255, 255, .7);
+}
+
+/* Room for the button, made by moving the whole HUD rather than by
+   re-stating each line's `bottom` — those are tuned per viewport in
+   responsive.css, and a transform rides on top of every one of them
+   without having to be repeated in each media query. */
+.hud.is-lifted {
+  transform: translateY(calc(-1 * (var(--advance-h) + clamp(6px, .7vw, 12px))));
+}
 
 
 /* ============================================================

@@ -4,15 +4,16 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#03050c" />
-  <title>Geo Drone — Landing Mission</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%23071427%27/%3E%3Ccircle cx=%2716%27 cy=%2717%27 r=%277%27 fill=%27%23eaf4ff%27/%3E%3Cpath d=%27M9 17h14%27 stroke=%27%232fd2ff%27 stroke-width=%272%27/%3E%3Cpath d=%27M4 11h6M22 11h6%27 stroke=%27%234fd8ff%27 stroke-width=%273%27 stroke-linecap=%27round%27/%3E%3C/svg%3E" />
+  <title>Spacecraft Landing Mission/</title>
   <link rel="stylesheet" href="css/style.css" />
   <link rel="stylesheet" href="css/animation.css" />
+  <!-- screens 4-8: the five one-shape-per-screen rounds -->
+  <link rel="stylesheet" href="css/rounds.css" />
   <link rel="stylesheet" href="css/responsive.css" />
 
   <link rel="preload" as="font" type="font/ttf" crossorigin
         href="assets/fonts/libre_baskerville/librebaskerville-variablefont_wght.ttf" />
-  <!-- the HUD chrome (mission bar, tally, target chip) is set in this one -->
+  <!-- the HUD chrome (mission bar, tally) is set in this one -->
   <link rel="preload" as="font" type="font/ttf" crossorigin
         href="assets/fonts/poppins/poppins-extrabold.ttf" />
 
@@ -26,7 +27,20 @@
   <link rel="preload" as="image" href="assets/images/Triangle%20spaceship.png" />
   <link rel="preload" as="image" href="assets/images/Square.png" />
   <link rel="preload" as="image" href="assets/images/Trapezium.png" />
-  <link rel="preload" as="image" href="assets/images/s4-bg.png" />
+
+  <!-- screens 4-8. The markup for those screens is built at load
+       (js/pages.js), so the start gate would find these in
+       document.images either way; preloading them here only means
+       the browser starts fetching while the document is still being
+       parsed instead of waiting for the scripts at the end of it. -->
+  <link rel="preload" as="image" href="assets/images/Rectangle.png" />
+  <link rel="preload" as="image" href="assets/images/Parallelogram.png" />
+  <link rel="preload" as="image" href="assets/images/Rhombus.png" />
+  <link rel="preload" as="image" href="assets/images/Square%20spaceship.png" />
+  <link rel="preload" as="image" href="assets/images/Rectangle%20spaceship.png" />
+  <link rel="preload" as="image" href="assets/images/Parallelogram%20spaceship.png" />
+  <link rel="preload" as="image" href="assets/images/Trapezium%20spaceship.png" />
+  <link rel="preload" as="image" href="assets/images/Rhombus%20spaceship.png" />
 </head>
 <body>
 
@@ -68,6 +82,7 @@
       <button class="launch" id="launchBtn" type="button" aria-label="Launch the survey drone">
         <span class="launch__ring" aria-hidden="true"></span>
         <span class="launch__body">
+          <span class="launch__face" aria-hidden="true"></span>
           <span class="launch__label">LAUNCH</span>
         </span>
       </button>
@@ -154,7 +169,7 @@
       </div>
     </div>
 
-    <!-- red scanner sweep -->
+    <!-- green neon scanner sweep -->
     <div class="scanner" id="scanner" aria-hidden="true">
       <div class="scanner__wash"></div>
       <div class="scanner__bar">
@@ -181,35 +196,41 @@
       </div>
     </header>
 
-    <!-- ░░ the shape to match, kept on screen through the task ░░ -->
-    <aside class="target" id="target" aria-hidden="true">
-      <p class="target__label">SPACESHIP</p>
-      <div class="target__art">
-        <img src="assets/images/Triangle spaceship.png" alt="" />
-      </div>
-      <p class="target__name">TRIANGLE</p>
-    </aside>
-
   </section>
 
 
   <!-- ══════════════════════════ SCREEN 3 — THE LANDING ══════════════════════════
 
        Geometry note: both pieces of artwork are 1254x1254 squares with a
-       triangle inscribed, and the two triangles sit in almost the same
-       place inside their box (measured off the alpha channel):
+       shape painted on them. Measured off the alpha channel:
 
-         Triangle spaceship.png   apex (49.9%, 2.8%)   base y 69.8%, x 4.94%..94.74%
-         Triangle.png (top face)  apex (50.6%, 7.6%)   base y 70.0%, x 6%..93%
+         Triangle.png            a clean triangle — apex (50.1%, 7.7%),
+                                 base y 91.4% from x 1.1% to 98.6%.
+                                 Fills 40.857% of the canvas; its centre
+                                 of area is (49.86%, 63.32%).
 
-       Every number below and in landShip() comes from those two lines, which
-       is what lets the ship sit exactly on a pad's painted surface instead
-       of being nudged into place by eye.
+         Triangle spaceship.png  hull apex (50.0%, 2.8%), base y 70.0%
+                                 from x 4.94% to 94.82%. Fills 31.389%;
+                                 centre of area (49.92%, 47.72%).
+
+       The camera looks straight down, so there is no ground line to stand
+       on: a landing is one flat shape coming down onto another, and both
+       sides are anchored on their CENTRE OF AREA. Every number below, in
+       the screen-3 block of style.css, and in padPlan() comes off those
+       two readings — which is what puts the craft square on the island
+       instead of nudged into place by eye.
+
+       The two triangles are not the same SHAPE, though: the land is
+       97.45 x 83.73 (ratio 1.164), the hull 89.87 x 67.86 (ratio 1.324).
+       Matched on AREA — which is the thing the lesson is about — the
+       craft lands 5.2% wider and 7.5% shorter than the island it fits.
+       Closing that is an artwork change, not a code one: see the note
+       over SHIP_FIT in js/animation.js.
        ══════════════════════════════════════════════════════════════════════ -->
   <section class="screen screen--landing" id="screenLanding">
 
     <!-- open water, darker than the survey feed -->
-    <div class="layer layer--bg s4-bg" aria-hidden="true"></div>
+    <div class="layer layer--bg s3-bg" aria-hidden="true"></div>
 
     <!-- ░░ the spaceship, with its measurements called out ░░ -->
     <div class="ship" id="ship">
@@ -249,39 +270,45 @@
          on them and the 20-unit pad is exactly the size of the ship. -->
     <div class="pads" id="pads">
       <div class="pad pad--l" data-area="30">
+        <!-- the invitation ring lies in the water AROUND the island, so
+             it sits outside .pad__hit: that element is clipped to the
+             triangle and would cut the whole circle away -->
+        <span class="pad__ring" aria-hidden="true"></span>
         <img class="pad__img" src="assets/images/Triangle.png" alt="" />
         <svg class="pad__fit" viewBox="0 0 100 100" aria-hidden="true">
-          <path d="M50.6 7.6 93 70H6z" />
+          <path d="M50.1 7.7 98.6 91.4H1.1z" />
         </svg>
         <p class="pad__area"><b>30</b><i>sq units</i></p>
         <button class="pad__hit" type="button" tabindex="-1"
-                aria-label="Landing zone of 30 square units">
-          <span class="pad__ring" aria-hidden="true"></span>
-        </button>
+                aria-label="Landing zone of 30 square units"></button>
       </div>
 
       <div class="pad pad--m" data-area="12">
+        <!-- the invitation ring lies in the water AROUND the island, so
+             it sits outside .pad__hit: that element is clipped to the
+             triangle and would cut the whole circle away -->
+        <span class="pad__ring" aria-hidden="true"></span>
         <img class="pad__img" src="assets/images/Triangle.png" alt="" />
         <svg class="pad__fit" viewBox="0 0 100 100" aria-hidden="true">
-          <path d="M50.6 7.6 93 70H6z" />
+          <path d="M50.1 7.7 98.6 91.4H1.1z" />
         </svg>
         <p class="pad__area"><b>12</b><i>sq units</i></p>
         <button class="pad__hit" type="button" tabindex="-1"
-                aria-label="Landing zone of 12 square units">
-          <span class="pad__ring" aria-hidden="true"></span>
-        </button>
+                aria-label="Landing zone of 12 square units"></button>
       </div>
 
       <div class="pad pad--r" data-area="20">
+        <!-- the invitation ring lies in the water AROUND the island, so
+             it sits outside .pad__hit: that element is clipped to the
+             triangle and would cut the whole circle away -->
+        <span class="pad__ring" aria-hidden="true"></span>
         <img class="pad__img" src="assets/images/Triangle.png" alt="" />
         <svg class="pad__fit" viewBox="0 0 100 100" aria-hidden="true">
-          <path d="M50.6 7.6 93 70H6z" />
+          <path d="M50.1 7.7 98.6 91.4H1.1z" />
         </svg>
         <p class="pad__area"><b>20</b><i>sq units</i></p>
         <button class="pad__hit" type="button" tabindex="-1"
-                aria-label="Landing zone of 20 square units">
-          <span class="pad__ring" aria-hidden="true"></span>
-        </button>
+                aria-label="Landing zone of 20 square units"></button>
       </div>
     </div>
 
@@ -291,6 +318,22 @@
       <span class="splash__ring"></span>
       <span class="splash__ring splash__ring--b"></span>
     </div>
+
+    <!-- dust thrown up where a craft that overbalanced on the
+         30-unit island goes over ON the rock; parked by JS -->
+    <div class="crash" id="crash" aria-hidden="true">
+      <span class="crash__flash"></span>
+      <span class="crash__dust"></span>
+      <span class="crash__ring"></span>
+      <span class="crash__ring crash__ring--b"></span>
+    </div>
+
+    <!-- ░░ celebration ░░
+         Paper falls from the top of the frame the moment the craft
+         is planted. The pieces are built by JS (see M.confetti) so
+         the count follows the viewport and the shower can be torn
+         down if the player jumps away mid-cheer. -->
+    <div class="confetti" id="confetti" aria-hidden="true"></div>
 
     <!-- No HUD frame on this screen: the landing is watched from
          outside the drone feed, so the tableau sits on open water and
@@ -314,6 +357,21 @@
         <p class="topbar__text" id="landTopbarText" role="status" aria-live="polite"></p>
       </div>
     </header>
+
+    <!-- ░░ on to the next screen ░░
+         Hidden until the craft is planted: it is the reward for the
+         right answer, not a way past the question.
+
+         The slot is what is centred, not the button — the button's
+         own transform is spoken for by its entry animation and its
+         press, so a translateX(-50%) on it would be clobbered by
+         both. -->
+    <div class="advance" aria-hidden="false">
+      <button class="advance__btn" id="advanceBtn" type="button" hidden>
+        <span class="advance__label">NEXT</span>
+        <svg class="advance__arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7" /></svg>
+      </button>
+    </div>
 
   </section>
 
@@ -376,6 +434,9 @@
 <script src="js/waveform.js"></script>
 <script src="js/typewriter.js"></script>
 <script src="js/animation.js"></script>
+<!-- screens 4-8: the shape data and the markup built from it. Before
+     script.js, which asks it for the rounds while it is booting. -->
+<script src="js/pages.js"></script>
 <script src="js/script.js"></script>
 </body>
 </html>
