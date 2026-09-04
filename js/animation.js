@@ -602,6 +602,84 @@
     return wait(last + 260).then(function () { confettiClear(host); });
   }
 
+  /* ---------------------------------------------------------- burst
+
+     A handful of paper thrown out from one point, for a single right
+     answer on one card — where confetti() is a shower over the whole
+     frame, for the landing at the end of a round.
+
+     Same idiom as confetti() and the starfield: the pieces are built
+     here with their own angle, distance, sag, spin and timing, and
+     the movement itself is a CSS keyframe driven by custom
+     properties, so twenty-odd pieces cost the compositor and not the
+     main thread.
+
+     `reach` is passed in rather than fixed, because these land on
+     islands and the islands are all different sizes — a burst that
+     suits the 90-unit island would bury the 14-unit one.           */
+  function burst(host, opts) {
+    opts = opts || {};
+    if (!host) return Promise.resolve();
+
+    host.textContent = '';
+
+    /* the one flourish here that is pure flourish, so the one that
+       goes away entirely */
+    if (reduced()) return Promise.resolve();
+
+    var count = opts.count == null ? 26 : opts.count;
+    var reach = opts.reach == null ? 60 : opts.reach;
+    /* the pieces are sized off the throw, not in fixed pixels: a
+       burst that carries 150px wants paper you can see at 150px,
+       and the same paper on a small island would be litter */
+    var unit = Math.max(4.5, reach * 0.085);
+    var frag = doc.createDocumentFragment();
+    var last = 0;
+    var i;
+
+    for (i = 0; i < count; i++) {
+      var p = doc.createElement('i');
+
+      /* spread evenly and then jittered, rather than at random:
+         twenty random angles leave gaps and clumps, and a burst
+         reads as a burst only when it goes out on every side */
+      var a = (i / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+      var d = reach * (0.55 + Math.random() * 0.7);
+
+      var ribbon = Math.random() < 0.6;
+      var w = unit * (ribbon ? 0.72 : 0.95) * (0.8 + Math.random() * 0.55);
+      var h = ribbon ? w * (1.8 + Math.random() * 1.3) : w;
+
+      var dur = 760 + Math.random() * 520;
+      var delay = Math.random() * 90;
+      if (dur + delay > last) last = dur + delay;
+
+      p.style.width = w.toFixed(2) + 'px';
+      p.style.height = h.toFixed(2) + 'px';
+      p.style.background = TINTS[(Math.random() * TINTS.length) | 0];
+      p.style.borderRadius = ribbon ? '1px' : '50%';
+      p.style.setProperty('--dx', (Math.cos(a) * d).toFixed(1) + 'px');
+      p.style.setProperty('--dy', (Math.sin(a) * d).toFixed(1) + 'px');
+      /* they sag on the way out, so the burst has a top and a bottom
+         instead of being a flat ring */
+      p.style.setProperty('--sag', (reach * (0.18 + Math.random() * 0.4)).toFixed(1) + 'px');
+      p.style.setProperty('--spin',
+        ((Math.random() < 0.5 ? -1 : 1) * (120 + Math.random() * 480)).toFixed(0) + 'deg');
+      p.style.setProperty('--dur', dur.toFixed(0) + 'ms');
+      p.style.setProperty('--delay', delay.toFixed(0) + 'ms');
+
+      frag.appendChild(p);
+    }
+
+    host.appendChild(frag);
+
+    /* self-clearing, so nothing is left animating on an island the
+       player has moved on from */
+    return wait(last + 160).then(function () {
+      if (host.parentNode) host.textContent = '';
+    });
+  }
+
   /* ---------------------------------------------------------- screen swap */
   function swapScreens(from, to, veil, ms) {
     ms = ms || 1250;
@@ -640,6 +718,7 @@
     shipReset: shipReset,
     confetti: confetti,
     confettiClear: confettiClear,
+    burst: burst,
     swapScreens: swapScreens
   };
 })(window);

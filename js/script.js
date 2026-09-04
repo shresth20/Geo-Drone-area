@@ -948,10 +948,11 @@
     e.ship.style.removeProperty('--lean');
     e.shipDims.classList.remove('is-drawn');
 
-    e.pads.classList.remove('is-picking', 'is-choosing', 'is-priced');
+    e.pads.classList.remove('is-picking', 'is-cleared', 'is-choosing', 'is-priced');
     roundPads(round).forEach(function (pad) {
       pad.classList.remove('is-up', 'is-picked', 'is-wrong', 'is-sunk',
-                           'is-priced', 'is-fit', 'is-loose', 'is-tight');
+                           'is-priced', 'is-fit', 'is-loose', 'is-tight',
+                           'is-scattered');
       var hit = pad.querySelector('.pad__hit');
       if (hit) hit.tabIndex = -1;
     });
@@ -971,6 +972,12 @@
 
     e.topbar.classList.remove('is-on');
     T.clear(e.topbarText);
+
+    /* A fresh shuffle of the five stations every time the screen is
+       entered, so the shape task cannot be won on position. Drawn
+       here rather than in runRound() because a jump has to leave the
+       screen in a state it could be shown from. */
+    if (global.GeoPages) global.GeoPages.scatter(round);
 
     /* both player-driven steps park a promise only a click can
        settle, so every jump settles it by hand — the step after it
@@ -999,14 +1006,10 @@
       },
 
       /* ── identify the shape ──
-         The craft arrives with NO callouts. This half of the round is
-         about its outline; measurements on screen would be answering
-         the next question before this one has been asked. */
-      function () {
-        e.ship.classList.add('is-in');
-        return M.wait(880);
-      },
-
+         The craft is NOT on screen for this half of the round. The
+         line names its shape and the player has to carry that to
+         the water themselves, which is a different question from
+         "which of these looks like that" — and a harder one. */
       function () { return narrate(e.topbarText, 'lookShapes'); },
 
       /* ── the landing zones surface ── */
@@ -1021,12 +1024,55 @@
       /* ── filter: over to the player, until all three are found ── */
       function (id) { return startRoundPicking(round, id); },
 
-      function () { return M.wait(400); },
-      function () { return narrate(e.topbarText, 'shapeMatch'); },
-
-      /* ── the two that never matched go back under ── */
+      /* ── the two that never matched go back under ──
+         Before the payoff line, not after it, which is the order the
+         survey feed uses: the water closing over the wrong shapes IS
+         the confirmation, and the line then has something to point
+         at. */
+      function () { return M.wait(420); },
       function () { return sinkRoundDecoys(round); },
-      function () { return M.wait(280); },
+
+      /* ── picked goes back to plain ──
+         Before anything moves. The three islands answered the shape
+         question and that question is closed, so they line up for
+         the next one looking like three ordinary candidates rather
+         than three answers already given. */
+      function () {
+        e.pads.classList.add('is-cleared');
+        return M.wait(M.reduced() ? 120 : 520);
+      },
+
+      /* ── and the three that matched line up to be compared ──
+         Fired, then given the length of the glide. The wait also
+         matters mechanically: `left` and `top` are what move, so
+         offsetLeft is mid-glide until it lands, and padPlan() must
+         not be asked anything until then. */
+      function () {
+        if (global.GeoPages) global.GeoPages.regroup(round);
+        return M.wait(M.reduced() ? 200 : 1120);
+      },
+
+      /* ── and here it is ──
+         The craft arrives on the answer, not before it: "these
+         landing zones have the same shape as the spaceship" is a
+         claim, and it is only worth anything if the player can hold
+         it up against the craft, so the line plays over it settling.
+
+         It comes AFTER the row has formed, and that ordering is not
+         only for the reading of it — the craft flies in down the
+         middle of the frame and rests there, which is water a
+         scattered island can perfectly well be sitting in. Once the
+         three have gone home to the row, the column the craft comes
+         down is clear by construction.
+
+         Still no callouts: the area is the next question. */
+      function () {
+        e.ship.classList.add('is-in');
+        /* the flight in takes 1.55s (shipArrive, css/rounds.css);
+           the line lands as it settles onto its station */
+        return M.wait(M.reduced() ? 200 : 1250);
+      },
+      function () { return narrate(e.topbarText, 'shapeMatch'); },
       function () { return narrate(e.topbarText, 'onlyMatching'); },
 
       /* ── calculate the area the craft needs ──
@@ -1132,10 +1178,16 @@
       return;
     }
 
-    /* --- a match --- */
+    /* --- a match ---
+       The burst is fired and not awaited: it runs itself out on the
+       compositor and clears itself up, while the count below decides
+       whether the task is over. `reach` comes off the island's own
+       box, so the paper suits the island it is thrown from — one
+       fixed size would bury the small ones. */
     pad.classList.add('is-picked');
     round.picked++;
     A.sfx('correct', { volume: 0.55 });
+    M.burst(pad.querySelector('.pad__pop'), { reach: pad.offsetWidth * 0.62 });
 
     if (round.picked >= roundMatches(round).length) {
       /* let the last tick land before the flow moves on */

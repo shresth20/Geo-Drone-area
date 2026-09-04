@@ -136,6 +136,21 @@
     }
   };
 
+  /* The bounding box of each painted silhouette, in box units, read
+     out of that shape's own clip polygon rather than written down a
+     second time — the scatter below has to know how much water an
+     island actually covers, and this way that figure cannot drift
+     from the outline it came from. */
+  Object.keys(LAND).forEach(function (key) {
+    var n = LAND[key].clip.match(/-?[\d.]+(?=%)/g).map(Number);
+    var xs = [], ys = [], i;
+    for (i = 0; i < n.length; i += 2) { xs.push(n[i]); ys.push(n[i + 1]); }
+    LAND[key].ext = [
+      Math.min.apply(null, xs) / 100, Math.min.apply(null, ys) / 100,
+      Math.max.apply(null, xs) / 100, Math.max.apply(null, ys) / 100
+    ];
+  });
+
 
   /* ---------------------------------------------------------- callouts
      The dimension overlay is drawn in PERCENT OF THE SHIP BOX: the
@@ -204,13 +219,16 @@
 
 
   /* ---------------------------------------------------------- the craft
-     `fill` and `c` are the HULL, flame masked out. `hull` is where
-     the callouts attach, and `flame` is how far down the exhaust
-     reaches — a base callout goes UNDER the flame, never through it,
-     which is why each one sits at a different y.                    */
+     `fill` and `c` are the HULL, flame masked out. `flame` is how
+     far down the exhaust reaches, in box units, off the unmasked
+     alpha: a base callout goes UNDER the flame, never through it,
+     which is why each one sits at a different y — and it is the
+     lowest ink on the craft, so it is what has to clear the island
+     row while the craft is hovering over it.                       */
   var CRAFT = {
     square: {
       img: 'Square spaceship.png', fill: 37.389, cx: 0.4984, cy: 0.3783,
+      flame: 0.9091,
       alt: 'Square spaceship, each side 6 units',
       /* hull x 18.2..81.5, y 8.3..67.3 — 63.3 across by 59.0 down,
          so the drawn square is 7% wider than it is tall. Both sides
@@ -223,6 +241,7 @@
 
     rectangle: {
       img: 'Rectangle spaceship.png', fill: 26.957, cx: 0.4981, cy: 0.4316,
+      flame: 0.8780,
       alt: 'Rectangular spaceship, 10 units long and 5 units wide',
       /* hull x 14.75..84.85, y 23.92..62.36 */
       dims:
@@ -233,6 +252,7 @@
     /* the parallelogram-hulled craft — the file called Trapezium */
     parallelogram: {
       img: 'Trapezium spaceship.png', fill: 29.117, cx: 0.5026, cy: 0.3885,
+      flame: 0.8804,
       alt: 'Parallelogram spaceship, base 7 units, height 6 units',
       /* top edge y 14.0 from x 35.7 to 92.7, bottom edge y 63.9 from
          x 7.3 to 64.5: every row 57.9 wide, sheared 0.58 sideways
@@ -248,6 +268,7 @@
     /* the trapezium-hulled craft — the file called Parallelogram */
     trapezium: {
       img: 'Parallelogram spaceship.png', fill: 39.193, cx: 0.4992, cy: 0.4509,
+      flame: 0.9577,
       alt: 'Trapezium spaceship, parallel sides 5 and 10 units, height 6 units',
       /* top edge y 14.2 from x 27.2 to 72.8 (45.6 across), bottom
          edge y 69.4 from x 2.4 to 97.3 (94.9 across), 55.2 apart —
@@ -262,6 +283,7 @@
 
     rhombus: {
       img: 'Rhombus spaceship.png', fill: 21.258, cx: 0.4989, cy: 0.4149,
+      flame: 0.9410,
       alt: 'Rhombus spaceship, diagonals 6 units and 7 units',
       /* vertices (49.9, 5.5) (79.7, 41.4) (49.9, 76.6) (20.2, 41.4).
 
@@ -433,6 +455,169 @@
   var REVEAL = [2, 0, 3, 4, 1];
 
 
+  /* ---------------------------------------------------------- the scatter
+
+     While the SHAPE is the question, the five islands are strewn
+     about the water and shuffled every time the screen is entered.
+     That is not decoration: with the round's own three always in a
+     row across the front, "pick the front three" wins the shape task
+     without ever looking at a shape, and the question stops being a
+     question.
+
+     Once the shape task is over the three survivors drop the scatter
+     and go home to the row, which is the arrangement everything
+     downstream — the craft's callouts, the HUD line, the fall
+     arithmetic — was tuned against. The craft only flies in after
+     that: it comes down the middle of the frame, which is water a
+     scattered island can perfectly well be sitting in.
+
+     ── the five stations ──
+
+     Two set back and inset, three across the front. The front three
+     ARE the row (the same 21/50/79 the area task uses, on the same
+     --land-y), so an island that happens to be scattered onto its
+     own row station simply stays where it is when the row forms.
+
+     Their y comes off the round's own --far-y and --land-y rather
+     than being written here, because the rhombus round runs to a
+     smaller unit and a higher row than the other four — see
+     css/rounds.css. Read, not hard-coded, so the two cannot drift.
+
+     ── why the shuffle is sampled and not just applied ──
+
+     The islands are sized by the areas printed on them, so they are
+     not interchangeable: the trapezium round's 90-unit island is a
+     third of the frame across and the rhombus round's 42-unit one is
+     40% of it top to bottom, while a decoy is a third of that. Some
+     permutations of five such objects across five fixed stations
+     simply overlap.
+
+     So every draw is measured before it is used, and rejected if two
+     islands would touch or one would leave the water. What is left
+     is genuinely random — no station is reserved for the big island,
+     which is what ordering the stations by capacity would have
+     amounted to — and nothing can ever be laid on top of anything
+     else. If a frame is too cramped for any draw at all, the islands
+     stay in the row: the shuffle is what gives, not the layout.     */
+
+  /* the water the islands may use: clear of the narration bar above
+     and the HUD line below */
+  var BAND = [0.17, 0.86];
+  var SIDES = 0.02;                        /* air at each edge */
+  /* Islands have to CLEAR each other, not merely not intersect.
+     offsetWidth is a whole number of pixels while the real box is
+     fractional, so a draw accepted at exactly touching can come out
+     a fraction over — and on a small frame, where the gaps are
+     proportionally tight, plenty of draws sit right at that line. */
+  var CLEAR = 3;
+  var STATION_X = [37, 63, 21, 50, 79];    /* two behind, three across */
+  var DRAWS = 200;
+
+  function shuffled(list) {
+    var a = list.slice(), i, j, t;
+    for (i = a.length - 1; i > 0; i--) {
+      j = Math.floor(Math.random() * (i + 1));
+      t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  /* One island, measured: its box in px (offsetWidth is --k x --pu,
+     and the box is square so that is both axes), and how far its
+     painted silhouette reaches from its centre of area on each
+     side — which is what has to fit, not the box. */
+  function measure(pad) {
+    var land = LAND[pad.dataset.shape];
+    var w = pad.offsetWidth;
+    return {
+      pad: pad,
+      left:  (land.cx - land.ext[0]) * w,
+      right: (land.ext[2] - land.cx) * w,
+      up:    (land.cy - land.ext[1]) * w,
+      down:  (land.ext[3] - land.cy) * w
+    };
+  }
+
+  function stations(sec, W, H) {
+    var cs = global.getComputedStyle(sec);
+    var far = parseFloat(cs.getPropertyValue('--far-y'));
+    var land = parseFloat(cs.getPropertyValue('--land-y'));
+    return STATION_X.map(function (x, i) {
+      return { x: W * x / 100, y: H * (i < 2 ? far : land) / 100 };
+    });
+  }
+
+  function collides(list, W, H) {
+    var i, j, a, b;
+    for (i = 0; i < list.length; i++) {
+      a = list[i];
+      if (a.x - a.m.left < W * SIDES + CLEAR ||
+          a.x + a.m.right > W * (1 - SIDES) - CLEAR ||
+          a.y - a.m.up < H * BAND[0] + CLEAR ||
+          a.y + a.m.down > H * BAND[1] - CLEAR) return true;
+      for (j = i + 1; j < list.length; j++) {
+        b = list[j];
+        if (a.x - a.m.left - CLEAR < b.x + b.m.right &&
+            b.x - b.m.left - CLEAR < a.x + a.m.right &&
+            a.y - a.m.up - CLEAR < b.y + b.m.down &&
+            b.y - b.m.up - CLEAR < a.y + a.m.down) return true;
+      }
+    }
+    return false;
+  }
+
+  function scatter(round) {
+    var sec = round.node;
+    var W = sec.clientWidth;
+    var H = sec.clientHeight;
+    var pads = round.el.padList;
+
+    function home() {
+      pads.forEach(function (pad) { pad.classList.remove('is-scattered'); });
+      round.el.reveal = REVEAL.map(function (i) { return pads[i]; });
+    }
+
+    if (!W || !H) { home(); return; }
+
+    var art = pads.map(measure);
+    var spots = stations(sec, W, H);
+    var placed = null;
+
+    for (var t = 0; t < DRAWS && !placed; t++) {
+      var draw = shuffled(art).map(function (m, i) {
+        return { m: m, x: spots[i].x, y: spots[i].y };
+      });
+      if (!collides(draw, W, H)) placed = draw;
+    }
+
+    if (!placed) { home(); return; }
+
+    placed.forEach(function (o) {
+      o.m.pad.style.setProperty('--sx', (o.x / W * 100).toFixed(3) + '%');
+      o.m.pad.style.setProperty('--sy', (o.y / H * 100).toFixed(3) + '%');
+      o.m.pad.classList.add('is-scattered');
+    });
+
+    /* and they surface back to front, left to right, so the
+       archipelago comes out of the distance instead of in DOM order */
+    round.el.reveal = placed.slice()
+      .sort(function (a, b) { return (a.y - b.y) || (a.x - b.x); })
+      .map(function (o) { return o.m.pad; });
+  }
+
+  /* The three that matched go home to the row to be compared. Their
+     row positions are the ones they were laid out at, so dropping
+     the scatter is the whole move — and it is the LAYOUT that
+     changes, not a transform, so padPlan() still reads the position
+     each island is really at. `left`/`top` transition in
+     css/rounds.css, which is what turns the change into a glide. */
+  function regroup(round) {
+    round.el.padList.forEach(function (pad) {
+      if (pad.dataset.shape === round.shape) pad.classList.remove('is-scattered');
+    });
+  }
+
+
   /* ---------------------------------------------------------- markup */
 
   var BADGE =
@@ -444,9 +629,6 @@
         '<circle cx="12" cy="9.2" r="1.7" />' +
       '</svg>' +
     '</span>';
-
-  var TICK =
-    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 13 5 5L20 7" /></svg>';
 
   /* One island. `area` is null for a decoy: it never gets as far as
      the arithmetic, so it is never given a number to print. */
@@ -480,11 +662,11 @@
       '</svg>' +
       (o.area == null ? ''
         : '<p class="pad__area"><b>' + o.area + '</b><i>sq units</i></p>') +
-      /* the tick is a sibling of the hit target, not a child of it as
-         it is on the survey feed: here the target is clipped to the
-         coastline, and a badge on a small island's centre of area
-         would come out with its edges shaved off */
-      '<span class="pad__pick" aria-hidden="true">' + TICK + '</span>' +
+      /* where the burst comes from when this island is picked. A
+         sibling of the hit target, not a child of it: that one is
+         clipped to the coastline, and a burst is meant to leave the
+         island. M.burst() fills it and empties it again. */
+      '<span class="pad__pop" aria-hidden="true"></span>' +
       '<button class="pad__hit" type="button" tabindex="-1" aria-label="' + name + '"></button>' +
     '</div>';
   }
@@ -631,5 +813,8 @@
     });
   }
 
-  global.GeoPages = { build: build, rounds: ROUNDS, land: LAND, craft: CRAFT };
+  global.GeoPages = {
+    build: build, scatter: scatter, regroup: regroup,
+    rounds: ROUNDS, land: LAND, craft: CRAFT
+  };
 })(window);

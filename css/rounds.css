@@ -33,7 +33,7 @@
 
   /* and the two decoys on this one, well above it: they are the
      middle distance, not part of the row that carries the question */
-  --far-y: 39%;
+  --far-y: 36%;
 
   --ship-y: 31%;
   --advance-h: clamp(32px, 2.5vw, 42px);
@@ -42,20 +42,29 @@
      attribute — they are computed from the artwork at load */
 }
 
-/* The rhombus round is the tall one at both ends.
+/* The rhombus round is the tall one at both ends, and it is the one
+   round that needs its own unit.
 
-   The craft's hull is 21% of its canvas, so the box that makes it
-   cover a 21-unit island is the tallest on any screen — hung 3%
-   lower so its nose stays clear of the narration bar.
+   The craft's hull is only 21% of its canvas, so the box that makes
+   it cover a 21-unit island is the tallest on any screen — and the
+   island art is 93% of its box from vertex to vertex, 44% of that
+   below the centre of area, nearly twice the drop of any other
+   shape. At the shared unit those two facts meet in the middle of
+   the frame: the 42-unit island (double the fit, so 1.41x across)
+   reaches past the HUD line, and pulling the row up to clear it
+   brings the island's top vertex to within 3px of the hovering
+   craft's exhaust.
 
-   And the island art is 93% of its box from the top vertex to the
-   bottom one, 44% of that below the centre of area, which is nearly
-   twice the drop of any other shape. On the 42-unit island — double
-   the area of the fit, so 1.41x across — that reaches past the HUD
-   line at 71%, so the whole row comes up to 67%. */
+   There is no arrangement of --ship-y and --land-y that fixes both
+   at 1.74vh, so this round is drawn at 1.62 — 7% smaller, which
+   buys about 40px of daylight at either end. The AREAS are
+   unaffected: they are in --pu squared, so the 21-unit island is
+   still exactly the craft's own footprint, which is the only thing
+   the lesson rests on. */
 .screen--round[data-shape="rhombus"] {
+  --pu: min(1vw, 1.62vh);
   --ship-y: 34%;
-  --land-y: 67%;
+  --land-y: 68%;
 }
 
 
@@ -67,15 +76,93 @@
    way, which is why js/pages.js hands out a class here and keeps
    only the artwork-derived figures inline.
 
-   The decoys are held wide at 13% and 87%: the craft's callouts
-   reach 28% of the ship box out to its left, and at these sizes
-   that is about 31% of the frame. */
-.screen--round .pad--far1 { --cx: 13%; --cy: var(--far-y); }
-.screen--round .pad--far2 { --cx: 87%; --cy: var(--far-y); }
+   These are only where an island is LAID OUT. While the shape is
+   the question all five are moved off to the shuffled stations in
+   js/pages.js, and the two set-back ones are laid out on those same
+   stations so that the two agree — a frame too cramped to scatter
+   falls back to this arrangement, and it should not be a different
+   one. */
+.screen--round .pad--far1 { --cx: 37%; --cy: var(--far-y); }
+.screen--round .pad--far2 { --cx: 63%; --cy: var(--far-y); }
 
 .screen--round .pad--row1 { --cx: 21%; --cy: var(--land-y); }
 .screen--round .pad--row2 { --cx: 50%; --cy: var(--land-y); }
 .screen--round .pad--row3 { --cx: 79%; --cy: var(--land-y); }
+
+
+/* ---------------------------------------------------------- the scatter
+   While the shape is the question the five islands are strewn about
+   the water, shuffled on every visit (see scatter() in js/pages.js).
+   --sx/--sy are that scattered station.
+
+   Dropping `.is-scattered` puts an island back at the row position
+   it was laid out at, and because `left`/`top` transition it GLIDES
+   there. It has to be the layout that moves and not a transform:
+   padPlan() reads offsetLeft/offsetTop to work out where the craft
+   is flying, so a translated island would have the craft coming
+   down on open water beside it. */
+.screen--round .pads .pad.is-scattered {
+  --cx: var(--sx);
+  --cy: var(--sy);
+}
+
+.screen--round .pad {
+  transition: left .95s cubic-bezier(.3, 0, .2, 1),
+              top .95s cubic-bezier(.3, 0, .2, 1);
+}
+
+.is-reduced .screen--round .pad { transition: none; }
+
+
+/* ---------------------------------------------------------- the arrival
+   The craft is not on screen while the shape is the question, so
+   when it comes it has to come from somewhere: down out of the top
+   of the frame, passing behind the narration bar (.ship is z-index
+   4, the bar is 9), overshooting its station and floating back up
+   onto it.
+
+   Parked on .ship__craft, not on .ship: .ship is the element the
+   descent, the topple and the fall are all driven on from JS, and a
+   CSS animation sitting on it would be fighting three Web
+   Animations. This is the craft's own motion, which is what
+   .ship__craft is for — and it hands straight over to the idle bob,
+   because shipArrive ends on exactly the transform shipBob begins
+   from.
+
+   `:not(.is-committed)` so that the instant the player commits to an
+   island this rule stops matching and screen 3's own verdicts take
+   the element back — `animation: none`, then shipSettle,
+   shipTremble or shipWobble, in the order they are written there. */
+.screen--round .ship.is-in:not(.is-committed) .ship__craft {
+  animation: shipArrive 1.55s cubic-bezier(.24, .86, .3, 1) both,
+             shipBob 3.6s ease-in-out 1.55s infinite;
+}
+
+/* the fade is what used to announce the craft; the flight does it
+   now, so the opacity is only there to keep it off the frame's edge
+   for the first frame or two */
+.screen--round .ship { transition: opacity .22s ease; }
+
+@keyframes shipArrive {
+  0% {
+    opacity: 0;
+    /* a whole box-height above its station, which clears the top of
+       the frame on every round */
+    transform: translateY(-118%) scale(.88) rotate(-3.4deg);
+  }
+  14%  { opacity: 1; }
+  58%  { transform: translateY(7%) scale(1.025) rotate(1.8deg); }
+  80%  { transform: translateY(-2.6%) scale(.996) rotate(-.7deg); }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(0);
+  }
+}
+
+/* reduced motion: it is simply where it is */
+.is-reduced .screen--round .ship.is-in:not(.is-committed) .ship__craft {
+  animation: none;
+}
 
 
 /* ---------------------------------------------------------- the shape task
@@ -121,57 +208,87 @@
 }
 
 
-/* --- the tick that lands on a match ---
-   Parked on the island's own centre of area (the same --ax/--ay the
-   printed number uses), because one shared figure cannot serve six
-   shapes: a triangle's centre sits well below a square's, and a
-   badge on the middle of the box would hang off the apex into open
+/* --- the burst that lands on a match ---
+   Paper thrown out from the island, instead of a badge stamped on
+   it. The pieces are built by M.burst() (js/animation.js) with their
+   own angle, distance, sag and spin; all this owns is the point they
+   come from and how they travel.
+
+   That point is the island's own centre of area — the same --ax/--ay
+   the printed number uses — because one shared figure cannot serve
+   six shapes: a triangle's centre sits well below a square's, and a
+   burst from the middle of the BOX would go off the apex into open
    water.
 
-   A sibling of .pad__hit, not a child of it as on the survey feed:
-   here the hit target is clipped to the coastline, and a badge on a
-   small island's centre would come out with its edges shaved off. */
-.pad__pick {
+   Nothing is clipped here (a sibling of .pad__hit, not a child of
+   it): the whole point of a burst is that it leaves the island. */
+.pad__pop {
   position: absolute;
   left: var(--ax, 49.9%);
   top: var(--ay, 62%);
   z-index: 5;
-  display: grid;
-  place-items: center;
-  width: 26%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: linear-gradient(180deg, #37f5c8, #10b48f);
-  box-shadow:
-    0 0 0 max(2px, .28vw) rgba(9, 30, 44, .85),
-    0 6px 18px rgba(0, 0, 0, .5),
-    0 0 26px rgba(55, 245, 200, .6);
-  transform: translate(-50%, -50%) scale(0);
-  opacity: 0;
+  width: 0;
+  height: 0;
   pointer-events: none;
 }
 
-.pad__pick svg {
-  width: 62%;
-  height: 62%;
-  fill: none;
-  stroke: #04241d;
-  stroke-width: 3.4;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+.pad__pop i {
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  will-change: transform, opacity;
+  animation: padPop var(--dur, 900ms) cubic-bezier(.16, .72, .3, 1)
+             var(--delay, 0ms) forwards;
 }
 
-/* accepted: a firm press-in, then it settles a touch larger, so a
-   locked-in island reads differently from the rest */
+@keyframes padPop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(.35) rotate(0);
+  }
+  12%  { opacity: 1; }
+  /* out to where it was thrown, still rising against its own sag */
+  58% {
+    opacity: 1;
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy)))
+               scale(1.05) rotate(calc(var(--spin) * .55));
+  }
+  /* and then it runs out of push and drops */
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--dx) * 1.14),
+                         calc(-50% + var(--dy) + var(--sag)))
+               scale(.9) rotate(var(--spin));
+  }
+}
+
+/* Accepted: a firm press-in and it settles a touch forward. No green
+   — the burst says "yes", and a green cast left sitting on the
+   island would still be saying it three questions later. What this
+   leaves behind is only "taken", which the player does need: they
+   are picking three, and an island that looked untouched would
+   invite a second tap that does nothing. */
 .pad.is-picked .pad__img {
   animation: zonePicked .62s cubic-bezier(.22, 1.3, .36, 1) forwards !important;
-  filter:
-    drop-shadow(0 0 15px rgba(2, 26, 52, .7))
-    drop-shadow(0 0 26px rgba(55, 245, 200, .75));
 }
 
-.pad.is-picked .pad__pick {
-  animation: pickStamp .5s cubic-bezier(.2, 1.5, .4, 1) .1s forwards;
+/* and its ring stops asking to be chosen */
+.screen--round .pads.is-picking .pad.is-picked .pad__ring {
+  animation: none;
+  opacity: 0;
+}
+
+/* Taken goes back to plain before the three of them move, for the
+   same reason the badge used to: nothing that answered the shape
+   question should follow the islands into the one about area. */
+.screen--round .pads.is-cleared .pad.is-picked .pad__img {
+  animation: padUnpick .45s ease forwards !important;
+}
+
+@keyframes padUnpick {
+  0%   { transform: scale(1.035); }
+  100% { transform: none; }
 }
 
 /* refused: two quick shakes and a red rim, no travel */
@@ -197,8 +314,7 @@
    on matching it once the area task arms, and would light the ring
    and the tap target back up over empty water. Hence the extra
    `.pads` here: these have to outrank those, not tie with them. */
-.screen--round .pads .pad.is-up.is-sunk .pad__hit,
-.screen--round .pads .pad.is-up.is-sunk .pad__pick {
+.screen--round .pads .pad.is-up.is-sunk .pad__hit {
   opacity: 0;
   pointer-events: none;
 }
@@ -225,17 +341,6 @@
   transition-delay: 0s;
 }
 
-/* The ticks have done their job by then, and three green ticks over
-   three different areas would read as three right answers. They go
-   out as the numbers come in. */
-.pads.is-priced .pad__pick {
-  animation: padPickFade .5s ease forwards;
-}
-
-@keyframes padPickFade {
-  0%   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-  100% { opacity: 0; transform: translate(-50%, -50%) scale(.7); }
-}
 
 
 /* ============================================================
